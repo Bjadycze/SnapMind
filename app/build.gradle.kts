@@ -20,9 +20,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Room schemas are committed so migrations can be written against them later.
-        ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
-
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -75,6 +76,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.work.testing)
+    androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.coroutines.test)
 }
