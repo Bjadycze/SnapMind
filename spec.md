@@ -12,7 +12,8 @@
 | Overlay from a background service renders nothing. `addView` returns without throwing; the OEM "background pop-up" permission does not help. | **`OverlayQuickCapture` is cut from v1.** Notification capture is the only path. |
 | Foreground service survives overnight and is never killed, with a battery exemption granted. | Ship, but onboarding must walk the user through the exemption. |
 | `delay()` inside the service is deferred by Doze for up to ~3 hours. `ContentObserver` delivery is **not** — a screenshot after 7h idle was detected in 357 ms. | Detection is reliable. Anything time-based must use WorkManager, never `delay()`. |
-| `specialUse` FGS starts successfully from `BOOT_COMPLETED` on API 35. | `BootReceiver` ships as designed. |
+| `specialUse` FGS starts from `BOOT_COMPLETED` on API 35 — **but only if MagicOS autostart is enabled for the app.** Without it the receiver never fires. | `BootReceiver` ships, and autostart becomes a required onboarding step, not an optional one. |
+| **Task 3 field finding:** reinstalling the app silently reset every runtime permission to denied, and nothing in the UI indicated it. | Confirms §5.3: permission state must be re-checked on every `onResume`, with a persistent banner when anything is missing. |
 | One screenshot produces 3 `ContentObserver` fires. | Debounce plus id-dedup is mandatory, as specified. |
 | MediaStore write lag reached 99 s while the process was frozen. | Staleness threshold raised to 120 s, plus a catch-up scan (§6.2). |
 | Screenshots live in `Pictures/Screenshots/` on this ROM. | `LIKE '%Screenshots%'` confirmed correct; Samsung's `DCIM/Screenshots` still to verify. |
@@ -233,7 +234,7 @@ explicit onboarding flow.
 | Notifications (`POST_NOTIFICATIONS`, API 33+) | Runtime dialog | Yes — the whole reminder engine depends on it |
 | Media images | Runtime dialog. On API 34+ check for *partial* grant and explain why full access is needed | Yes for screenshot detection |
 | Battery optimization exemption | `Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` (open the settings list, do **not** use the direct-request action — Play policy restricts it) | Effectively yes — measured as the difference between a usable and an unusable app |
-| OEM autostart (Honor/Huawei "App launch", Samsung "Never sleeping apps") | Cannot be detected or requested. Show a manufacturer-specific instruction card when `Build.MANUFACTURER` matches a known-restrictive OEM | No, but strongly prompted |
+| OEM autostart (Honor/Huawei "App launch", Samsung "Never sleeping apps") | Cannot be detected or requested. Show a manufacturer-specific instruction card when `Build.MANUFACTURER` matches a known-restrictive OEM | **Effectively yes on Honor/Huawei** — measured in Task 3: without it `BOOT_COMPLETED` never reaches the app and the observer stays dead after every reboot |
 | Do Not Disturb exception | `NotificationManager.isNotificationPolicyAccessGranted()`, then `Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS` | No — but explain that captures are silent under DND without it |
 
 Onboarding rules:

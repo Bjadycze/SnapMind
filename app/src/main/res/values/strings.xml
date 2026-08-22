@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">SnapMind</string>
+
+    <string name="channel_capture_name">Quick capture</string>
+    <string name="channel_capture_desc">Appears right after a screenshot so you can add a note</string>
+    <string name="channel_service_name">Screenshot watcher</string>
+    <string name="service_running">Watching for screenshots</string>
+
+    <string name="capture_title">Screenshot captured</string>
+    <string name="capture_body">Add a note before you forget</string>
+    <string name="capture_action_note">Note</string>
 </resources>

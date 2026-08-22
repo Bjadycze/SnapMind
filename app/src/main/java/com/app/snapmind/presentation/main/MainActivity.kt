@@ -1,5 +1,6 @@
 package com.app.snapmind.presentation.main
 
+import com.app.snapmind.service.foreground.ScreenshotObserverService
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +31,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        // Temporary: start observer for testing. Task 4 bude mít příslušné UI.
+        ScreenshotObserverService.start(this)
+
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
