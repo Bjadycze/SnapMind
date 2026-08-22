@@ -1,12 +1,71 @@
 <resources>
     <string name="app_name">SnapMind</string>
 
+    <!-- Notification channels -->
     <string name="channel_capture_name">Quick capture</string>
     <string name="channel_capture_desc">Appears right after a screenshot so you can add a note</string>
     <string name="channel_service_name">Screenshot watcher</string>
     <string name="service_running">Watching for screenshots</string>
 
+    <!-- Capture notification -->
     <string name="capture_title">Screenshot captured</string>
     <string name="capture_body">Add a note before you forget</string>
     <string name="capture_action_note">Note</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Before we start</string>
+    <string name="onboarding_intro">SnapMind needs a few permissions to notice your screenshots. You can skip any of them — the app still works when you share things into it.</string>
+    <string name="onboarding_continue">Done</string>
+    <string name="onboarding_skip">Skip for now</string>
+
+    <string name="perm_notifications_title">Notifications</string>
+    <string name="perm_notifications_reason">The note prompt is a notification. Without this, nothing appears after a screenshot.</string>
+
+    <string name="perm_media_title">Photos</string>
+    <string name="perm_media_reason">Needed to see the screenshot you just took. Choose “Allow all” — partial access does not work for this.</string>
+
+    <string name="perm_battery_title">Battery</string>
+    <string name="perm_battery_reason">Without an exemption the system freezes SnapMind overnight and captures stop arriving.</string>
+
+    <string name="perm_autostart_title">Auto-launch</string>
+    <string name="perm_autostart_reason">Your phone blocks apps from starting after a restart. Turn on auto-launch for SnapMind, or it stays silent until you open it.</string>
+
+    <string name="perm_dnd_title">Do Not Disturb</string>
+    <string name="perm_dnd_reason">Optional. Without it, captures during Do Not Disturb arrive silently instead of popping up.</string>
+
+    <string name="action_allow">Allow</string>
+    <string name="action_open_settings">Open settings</string>
+
+    <string name="status_granted">Ready</string>
+    <string name="status_missing">Missing</string>
+    <string name="status_not_needed">Not needed</string>
+    <string name="status_check_manually">Check manually</string>
+
+    <!-- Main screen -->
+    <string name="banner_permissions_title">Captures are not working</string>
+    <string name="banner_permissions_body">A permission SnapMind needs was turned off. Screenshots are not being noticed right now.</string>
+    <string name="banner_permissions_action">Fix this</string>
+
+    <string name="empty_title">Nothing captured yet</string>
+    <string name="empty_body">Take a screenshot anywhere, or share something into SnapMind. It will show up here.</string>
+
+    <string name="section_archive">Archive</string>
+    <string name="item_no_note">No note</string>
+    <string name="main_settings">Settings</string>
+
+    <!-- Daily reminder -->
+    <string name="channel_reminder_name">Daily reminder</string>
+    <string name="channel_reminder_desc">One quiet reminder a day about things you saved</string>
+    <string name="digest_title">A few things you saved</string>
+    <string name="digest_body_one">One item is waiting whenever you have a moment.</string>
+    <string name="digest_body_many">%1$d items are waiting whenever you have a moment.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_reminder_title">Reminder time</string>
+    <string name="settings_reminder_body">One reminder a day, at most three items. Never more than that.</string>
+    <string name="settings_quiet_start_title">Quiet from</string>
+    <string name="settings_quiet_body">No reminders during these hours.</string>
+    <string name="settings_quiet_end_title">Quiet until</string>
+    <string name="settings_back">Back</string>
 </resources>

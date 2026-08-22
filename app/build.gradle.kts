@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.coil.compose)
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.hilt.android)
@@ -76,9 +77,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.work.testing)
-    androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.junit)
-    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.room.testing)
-    androidTestImplementation(libs.coroutines.test)
 }
