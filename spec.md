@@ -11,7 +11,8 @@
 |---|---|
 | Overlay from a background service renders nothing. `addView` returns without throwing; the OEM "background pop-up" permission does not help. | **`OverlayQuickCapture` is cut from v1.** Notification capture is the only path. |
 | Foreground service survives overnight and is never killed, with a battery exemption granted. | Ship, but onboarding must walk the user through the exemption. |
-| `delay()` inside the service is deferred by Doze for up to ~3 hours. `ContentObserver` delivery is **not** — a screenshot after 7h idle was detected in 357 ms. | Detection is reliable. Anything time-based must use WorkManager, never `delay()`. |
+| `delay()` inside the service is deferred by Doze for up to ~3 hours. `ContentObserver` delivery is **not** — a screenshot after 7h idle was detected in 357 ms. | Detection is reliable. |
+| **v1.1 correction.** WorkManager is deferred too. A one-shot job set for 11:00 ran at 12:45; the original "WorkManager was unaffected" claim came from ContentObserver delivery and boot, never from measured timed work. `AlarmManager.setAndAllowWhileIdle` fires within ~5 minutes. | All time-based behaviour uses AlarmManager. See §7.4. |
 | `specialUse` FGS starts from `BOOT_COMPLETED` on API 35 — **but only if MagicOS autostart is enabled for the app.** Without it the receiver never fires. | `BootReceiver` ships, and autostart becomes a required onboarding step, not an optional one. |
 | **Task 3 field finding:** reinstalling the app silently reset every runtime permission to denied, and nothing in the UI indicated it. | Confirms §5.3: permission state must be re-checked on every `onResume`, with a persistent banner when anything is missing. |
 | One screenshot produces 3 `ContentObserver` fires. | Debounce plus id-dedup is mandatory, as specified. |
@@ -81,7 +82,8 @@ These are the known failure points. The implementation order in §8 exists becau
 | R2 | Aggressive OEM battery management. **Measured:** the service is not killed, but it *is* frozen for long stretches; only ContentObserver delivery still wakes it. | Onboarding must secure the battery exemption. No feature may depend on in-service timers. |
 | R3 | Android 14+ partial photo access (`READ_MEDIA_VISUAL_USER_SELECTED`) means the ContentObserver sees nothing for screenshots the user did not explicitly grant. | Detect partial-grant state and surface a blocking explainer; do not fail silently. |
 | R4 | `ContentObserver` fires multiple times per single screenshot. **Measured: consistently 3 fires.** | Deduplicate by MediaStore `_ID`; see §6.2. |
-| R7 | **New.** Do Not Disturb suppresses the heads-up, so the capture prompt is invisible until the user opens the shade. | See §6.3. Must be surfaced in onboarding rather than silently failing. |
+| R7 | Do Not Disturb suppresses the heads-up, so the capture prompt is invisible until the user opens the shade. **Task 5 field finding:** on MagicOS the app must additionally be added to the DND allow-list, not just granted policy access. | See §6.3. Surfaced in onboarding rather than silently failing. |
+| R8 | **New, and the most dangerous of the set.** Android app hibernation ("Manage unused apps") revokes permissions and stops background work for apps the user has not opened recently. SnapMind is *designed* not to be opened — that is the whole point — so the system will eventually classify it as abandoned and switch it off. | Onboarding must offer to disable hibernation for this app (`Intent.ACTION_APPLICATION_DETAILS_SETTINGS`, or the unused-app-restrictions API where available). The §5.3 banner is the safety net, but it only fires once the user opens the app. |
 | R5 | `foregroundServiceType="specialUse"` requires a manifest `<property>` justification and is scrutinised at Play review. **Verified working from `BOOT_COMPLETED` on API 35.** | Declared correctly from the start; justification string kept in the manifest. |
 | R6 | ComposeView hosted in `WindowManager` crashes unless three ViewTree owners are set manually. | See §6.4. Non-negotiable checklist item. |
 
@@ -235,7 +237,8 @@ explicit onboarding flow.
 | Media images | Runtime dialog. On API 34+ check for *partial* grant and explain why full access is needed | Yes for screenshot detection |
 | Battery optimization exemption | `Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` (open the settings list, do **not** use the direct-request action — Play policy restricts it) | Effectively yes — measured as the difference between a usable and an unusable app |
 | OEM autostart (Honor/Huawei "App launch", Samsung "Never sleeping apps") | Cannot be detected or requested. Show a manufacturer-specific instruction card when `Build.MANUFACTURER` matches a known-restrictive OEM | **Effectively yes on Honor/Huawei** — measured in Task 3: without it `BOOT_COMPLETED` never reaches the app and the observer stays dead after every reboot |
-| Do Not Disturb exception | `NotificationManager.isNotificationPolicyAccessGranted()`, then `Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS` | No — but explain that captures are silent under DND without it |
+| Do Not Disturb exception | `NotificationManager.isNotificationPolicyAccessGranted()`, then `Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS`. **On MagicOS the app also has to be added to the DND allow-list manually** — policy access alone is not enough | No — but explain that captures are silent under DND without it |
+| App hibernation disabled | `PackageManager.isAutoRevokeWhitelisted()` where available, otherwise route to app settings. **Critical for this app specifically:** it is meant to run unattended, so hibernation will eventually trigger and silently revoke everything | Effectively yes — see R8 |
 
 Onboarding rules:
 
@@ -403,11 +406,26 @@ this engine exists.
 
 ### 7.4 Scheduling
 
-Use a single `PeriodicWorkRequest` (daily) rather than one-shot work per item, so the number
-of scheduled jobs never scales with the number of items. **Never use `delay()` or a
-`Handler` inside the observer service for anything time-based** — Task 0 measured those being
-deferred by up to 3 hours in Doze, while WorkManager and ContentObserver delivery were
-unaffected. Use `@HiltWorker`,
+**`AlarmManager.setAndAllowWhileIdle`, re-armed after each firing.** Never `delay()`, never a
+`Handler`, and — corrected in v1.1 — never WorkManager either.
+
+Three mechanisms were tried on the Honor:
+
+| Mechanism | Result |
+|---|---|
+| `delay()` in the service | Deferred up to 3 hours by Doze (Task 0) |
+| `PeriodicWorkRequest` | Interval measured from last enqueue, not wall clock. Opening the app at 15:00 moved an 18:00 reminder to 15:00 |
+| One-shot `WorkManager` | Correct time, wrong delivery: an 11:00 reminder arrived at 12:45 |
+| `AlarmManager.setAndAllowWhileIdle` | 20:00 reminder arrived at 20:05. **Shipped.** |
+
+Inexact by design, so expect minutes of drift. `setExactAndAllowWhileIdle` would be precise
+but needs `SCHEDULE_EXACT_ALARM`, which Play restricts to alarm clocks and calendars — not a
+trade worth making for a notification whose own copy says "whenever you have a moment".
+
+Alarms do not survive a reboot, so `BootReceiver` re-arms them.
+
+One alarm at a time, never one per item: the number of scheduled wake-ups must not scale with
+the number of captures. Use `@HiltWorker`,
 `HiltWorkerFactory`, and implement `Configuration.Provider` in `SnapMindApp` with
 on-demand WorkManager initialization (remove the default initializer in the manifest).
 
@@ -573,3 +591,6 @@ not affect the architecture above.
 3. Partial photo access (`READ_MEDIA_VISUAL_USER_SELECTED`) behaviour — the spike device
    reported `partial=true` alongside full access, so the two states were never cleanly
    separated. Re-test with "Select photos" only.
+4. How long hibernation takes to trigger in practice, and whether the whitelist survives an
+   app update. This determines whether the §5.3 banner is sufficient or whether the app needs
+   to actively re-prompt (R8).

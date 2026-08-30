@@ -53,6 +53,13 @@
             android:exported="false" />
 
         <receiver
+            android:name=".service.capture.DismissCaptureReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".service.reminder.ReminderAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".service.boot.BootReceiver"
             android:exported="true">
             <intent-filter>

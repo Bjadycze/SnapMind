@@ -11,6 +11,7 @@
     <string name="capture_title">Screenshot captured</string>
     <string name="capture_body">Add a note before you forget</string>
     <string name="capture_action_note">Note</string>
+    <string name="capture_action_discard">Discard</string>
 
     <!-- Onboarding -->
     <string name="onboarding_title">Before we start</string>
@@ -30,8 +31,11 @@
     <string name="perm_autostart_title">Auto-launch</string>
     <string name="perm_autostart_reason">Your phone blocks apps from starting after a restart. Turn on auto-launch for SnapMind, or it stays silent until you open it.</string>
 
+    <string name="perm_hibernation_title">Keep SnapMind awake</string>
+    <string name="perm_hibernation_reason">Android switches off apps you rarely open. SnapMind is meant to run without you opening it, so it gets switched off eventually unless you turn this restriction off.</string>
+
     <string name="perm_dnd_title">Do Not Disturb</string>
-    <string name="perm_dnd_reason">Optional. Without it, captures during Do Not Disturb arrive silently instead of popping up.</string>
+    <string name="perm_dnd_reason">Optional. Without it, captures during Do Not Disturb arrive silently instead of popping up. On some phones you also need to add SnapMind to the Do Not Disturb allow-list by hand.</string>
 
     <string name="action_allow">Allow</string>
     <string name="action_open_settings">Open settings</string>
@@ -51,14 +55,23 @@
 
     <string name="section_archive">Archive</string>
     <string name="item_no_note">No note</string>
+    <string name="item_settled">%1$s · done</string>
     <string name="main_settings">Settings</string>
+
+    <!-- Item detail -->
+    <string name="detail_note_label">Note</string>
+    <string name="detail_note_hint">What was this for?</string>
+    <string name="detail_recognised_text">Recognised text</string>
+    <string name="detail_show_text">Show recognised text</string>
+    <string name="detail_open_gallery">Open in gallery</string>
+    <string name="detail_discard">Discard</string>
+    <string name="detail_close">Close</string>
 
     <!-- Daily reminder -->
     <string name="channel_reminder_name">Daily reminder</string>
     <string name="channel_reminder_desc">One quiet reminder a day about things you saved</string>
     <string name="digest_title">A few things you saved</string>
-    <string name="digest_body_one">One item is waiting whenever you have a moment.</string>
-    <string name="digest_body_many">%1$d items are waiting whenever you have a moment.</string>
+    <string name="digest_item_untitled">Screenshot</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

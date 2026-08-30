@@ -8,9 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.app.snapmind.presentation.onboarding.OnboardingScreen
 import com.app.snapmind.presentation.settings.SettingsScreen
+import com.app.snapmind.presentation.theme.SnapMindTheme
 import com.app.snapmind.presentation.settings.SettingsViewModel
 import com.app.snapmind.service.foreground.ScreenshotObserverService
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,7 +41,7 @@ class MainActivity : ComponentActivity() {
         settingsViewModel.ensureScheduled()
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            SnapMindTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
                     var showOnboarding by remember { mutableStateOf(false) }
