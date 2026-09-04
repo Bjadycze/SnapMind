@@ -84,7 +84,7 @@ These are the known failure points. The implementation order in §8 exists becau
 | R4 | `ContentObserver` fires multiple times per single screenshot. **Measured: consistently 3 fires.** | Deduplicate by MediaStore `_ID`; see §6.2. |
 | R7 | Do Not Disturb suppresses the heads-up, so the capture prompt is invisible until the user opens the shade. **Task 5 field finding:** on MagicOS the app must additionally be added to the DND allow-list, not just granted policy access. | See §6.3. Surfaced in onboarding rather than silently failing. |
 | R8 | **New, and the most dangerous of the set.** Android app hibernation ("Manage unused apps") revokes permissions and stops background work for apps the user has not opened recently. SnapMind is *designed* not to be opened — that is the whole point — so the system will eventually classify it as abandoned and switch it off. | Onboarding must offer to disable hibernation for this app (`Intent.ACTION_APPLICATION_DETAILS_SETTINGS`, or the unused-app-restrictions API where available). The §5.3 banner is the safety net, but it only fires once the user opens the app. |
-| R5 | `foregroundServiceType="specialUse"` requires a manifest `<property>` justification and is scrutinised at Play review. **Verified working from `BOOT_COMPLETED` on API 35.** | Declared correctly from the start; justification string kept in the manifest. |
+| R5 | `foregroundServiceType="specialUse"` requires a manifest `<property>` justification and is scrutinised at Play review. **Verified working from `BOOT_COMPLETED` on API 35, and confirmed end-to-end on device: the service restarts after a real reboot.** The autostart exemption of R2 is a prerequisite — without it the receiver never runs. | Declared correctly from the start; justification string kept in the manifest. |
 | R6 | ComposeView hosted in `WindowManager` crashes unless three ViewTree owners are set manually. | See §6.4. Non-negotiable checklist item. |
 
 ---
@@ -99,48 +99,54 @@ app/src/main/java/com/app/snapmind/
 │   ├── DatabaseModule.kt
 │   ├── ServiceModule.kt
 │   ├── CaptureModule.kt                    # Binds the selected QuickCapturePresenter
+│   ├── ClassifyModule.kt                   # Task 7 — binds ContentClassifier
 │   └── RepositoryModule.kt
 ├── data/
 │   ├── local/
 │   │   ├── SnapMindDatabase.kt
-│   │   ├── Converters.kt                   # NEW — TypeConverter for CaptureSource
+│   │   ├── Converters.kt                   # TypeConverter for CaptureSource
 │   │   ├── dao/
 │   │   │   └── CapturedItemDao.kt
 │   │   └── entity/
 │   │       └── CapturedItemEntity.kt
 │   ├── mediastore/
-│   │   └── ScreenshotQuery.kt              # NEW — isolated MediaStore query + dedup logic
+│   │   └── ScreenshotQuery.kt              # isolated MediaStore query + dedup logic
 │   ├── ocr/
 │   │   └── MlKitOcrAnalyzerImpl.kt
 │   ├── prefs/
-│   │   └── SettingsDataStore.kt            # NEW — reminder window, quiet hours, capture mode
+│   │   └── SettingsDataStore.kt            # reminder window, quiet hours, palette, theme
 │   └── repository/
 │       └── CapturedItemRepositoryImpl.kt
 ├── domain/
+│   ├── classify/                           # Task 7 — on-device only, no network
+│   │   ├── ContentClassifier.kt            # interface + DetectedCategory + Signals
+│   │   ├── Tier0RegexClassifier.kt
+│   │   ├── Tier1KeywordClassifier.kt
+│   │   └── ChainedContentClassifier.kt
 │   ├── model/
 │   │   ├── CapturedItem.kt
 │   │   ├── CaptureSource.kt                # Enum: SCREENSHOT, SHARE_SHEET
-│   │   ├── ReminderPolicy.kt               # NEW — see §7.3
-│   │   └── PermissionState.kt              # NEW — see §5.3
+│   │   ├── ReminderPolicy.kt               # see §7.3
+│   │   └── PermissionState.kt              # see §5.3
 │   ├── repository/
 │   │   └── CapturedItemRepository.kt
 │   ├── service/
 │   │   ├── OcrAnalyzer.kt
-│   │   └── QuickCapturePresenter.kt        # CHANGED — replaces FloatingOverlayManager
+│   │   └── QuickCapturePresenter.kt        # replaces FloatingOverlayManager
 │   └── usecase/
 │       ├── ProcessCapturedImageUseCase.kt
 │       ├── SaveItemAndScheduleUseCase.kt
 │       ├── GetPendingRemindersUseCase.kt
-│       ├── BuildReminderDigestUseCase.kt   # NEW — anti-overwhelm batching
-│       └── ResolvePermissionStateUseCase.kt # NEW
+│       ├── BuildReminderDigestUseCase.kt   # anti-overwhelm batching
+│       └── ResolvePermissionStateUseCase.kt
 ├── presentation/
 │   ├── theme/
-│   │   └── Color.kt, Theme.kt, Type.kt
+│   │   └── Palette.kt, Theme.kt, Type.kt
 │   ├── main/
 │   │   ├── MainActivity.kt
 │   │   ├── MainViewModel.kt
 │   │   └── MainScreen.kt
-│   ├── onboarding/                         # NEW — see §5.3
+│   ├── onboarding/                         # see §5.3
 │   │   ├── OnboardingViewModel.kt
 │   │   └── OnboardingScreen.kt
 │   └── components/
@@ -153,7 +159,7 @@ app/src/main/java/com/app/snapmind/
     │   ├── NotificationQuickCapture.kt     # The only presenter in v1
     │   └── QuickCaptureReplyReceiver.kt    # Handles RemoteInput result
     ├── boot/
-    │   └── BootReceiver.kt                 # NEW — was missing despite the permission
+    │   └── BootReceiver.kt
     └── worker/
         └── ReminderWorker.kt
 ```
@@ -169,16 +175,16 @@ app/src/main/java/com/app/snapmind/
 <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-    android:maxSdkVersion="32" />
+android:maxSdkVersion="32" />
 
-<!-- Background observer -->
+    <!-- Background observer -->
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
-<!-- Notifications -->
+    <!-- Notifications -->
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-<!-- Restart after reboot -->
+    <!-- Restart after reboot -->
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 ```
 
@@ -261,24 +267,32 @@ enum class CaptureSource { SCREENSHOT, SHARE_SHEET }
 data class CapturedItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val imageUri: String?,              // null for text-only shares
-    val mediaStoreId: Long?,            // NEW — dedup key for screenshots, null otherwise
+    val mediaStoreId: Long?,            // dedup key for screenshots, null otherwise
     val extractedText: String,
     val userNote: String,
     val source: CaptureSource,
     val timestamp: Long,
     val isProcessed: Boolean,           // OCR completed
     val requiresReminder: Boolean,
-    val remindersSent: Int = 0,         // NEW — drives the escalation cap in §7.3
-    val resolvedAt: Long? = null        // NEW — user acted on it; excluded from digests
+    val remindersSent: Int = 0,         // drives the escalation cap in §7.3
+    val resolvedAt: Long? = null,       // user acted on it; excluded from digests
+    val resolution: String? = null,     // DONE / DISCARDED, §11.8, schema v2
+    val detectedCategory: String? = null,   // Task 7, schema v3
+    val detectedDateMillis: Long? = null    // Task 7, schema v3
 )
 ```
 
 `Converters.kt` must provide the `CaptureSource` ↔ `String` TypeConverter and be registered
 via `@TypeConverters` on the database class. Store the enum **name**, not the ordinal —
-ordinals break the moment a value is inserted into the enum.
+ordinals break the moment a value is inserted into the enum. The same rule applies to
+`detectedCategory`, which stores `DetectedCategory.name`.
 
 Add a unique index on `mediaStoreId` to make dedup a database-level guarantee, not just
 application logic.
+
+**Schema versions:** v2 added `resolution` (§11.8), v3 added `detectedCategory` and
+`detectedDateMillis` (§11.14). Migrations are always explicit — `fallbackToDestructiveMigration`
+is prohibited, there are real captures on the test device.
 
 ### 6.2 Screenshot detection
 
@@ -335,9 +349,18 @@ Two measured constraints on this path:
   Try `setStyle(NotificationCompat.BigTextStyle())` or posting pre-expanded, and measure
   again. If neither works, the tap target must open a lightweight capture Activity instead.
 - **Do Not Disturb suppresses the heads-up entirely** (R7). The notification still posts and
-  the reply still works, but silently. Detect DND via
-  `NotificationManager.getCurrentInterruptionFilter()` and offer the policy-access exception
-  during onboarding.
+  the reply still works, but silently.
+
+  **Decided in v1.1: leave it that way.** Do Not Disturb is the user stating they do not want
+  to be interrupted, and an app that overrides that is telling them its business outranks
+  their decision — which is how apps end up muted permanently. Nothing is lost either: the
+  capture is saved, the reply still works, the item appears in the list. It simply does not
+  jump the screen.
+
+  The escape hatch already exists and belongs to the user, not to us: granting policy access
+  and adding SnapMind to the system allow-list makes captures break through. That is offered
+  during onboarding and left switched off. Do not add an in-app "ignore Do Not Disturb"
+  toggle; it would be the same override wearing a settings label.
 
 ### 6.4 Hosting Compose in WindowManager — deferred, not deleted
 
@@ -374,6 +397,9 @@ user wait on ML Kit to write a note.
 
 Downscale images wider than ~2000 px before recognition; full-resolution screenshots from
 modern phones are slow to process and offer no accuracy benefit.
+
+Classification (§11.14) runs in the same worker, immediately after the OCR text is written —
+never on the capture path.
 
 ---
 
@@ -452,7 +478,7 @@ only goal is to answer four questions on real target hardware:
 `docs/spike-results.md`, and a decision on whether `OverlayQuickCapture` ships in v1.
 **Delete the spike code afterwards.** Do not evolve it into the app.
 
-### Task 1 — Project setup
+### Task 1 — Project setup ✅ shipped
 
 Version catalog, KSP, Hilt, Compose, Room, WorkManager, ML Kit. Full manifest per §5.
 `SnapMindApp` with `@HiltAndroidApp` and `Configuration.Provider`. Empty `MainActivity` that
@@ -461,7 +487,7 @@ builds and launches.
 **Done when:** clean build passes, app installs and shows an empty screen, `./gradlew
 lint` is clean.
 
-### Task 2 — Data layer
+### Task 2 — Data layer ✅ shipped
 
 `CapturedItemEntity` (§6.1), `CaptureSource`, `Converters`, unique index on `mediaStoreId`,
 `CapturedItemDao` (insert / getAllFlow / getUnresolvedForDigest / update / delete),
@@ -471,7 +497,7 @@ lint` is clean.
 **Done when:** instrumented Room tests cover insert, dedup-collision on `mediaStoreId`, and
 the digest query ordering.
 
-### Task 3 — Capture pipeline, notification path
+### Task 3 — Capture pipeline, notification path ✅ shipped
 
 `OcrAnalyzer` implementation. `ScreenshotQuery` with dedup and debounce per §6.2.
 `MediaStoreObserver`. `ScreenshotObserverService` as a foreground service with the correct
@@ -482,7 +508,7 @@ type and property. `NotificationQuickCapture` and `QuickCaptureReplyReceiver`.
 within 1.5 s, replying to it persists the note, and OCR text appears in the database
 afterwards. Verify after a reboot.
 
-### Task 4 — Onboarding and main screen
+### Task 4 — Onboarding and main screen ✅ shipped
 
 `PermissionState`, `ResolvePermissionStateUseCase`, `OnboardingScreen` per §5.3.
 `MainActivity` handling `ACTION_SEND` for `image/*` and `text/plain`. `MainViewModel` and
@@ -492,10 +518,11 @@ afterwards. Verify after a reboot.
 into the app creates an item, and revoking media permission from Settings surfaces the banner
 rather than breaking anything.
 
-### Task 5 — Reminder engine
+### Task 5 — Reminder engine ✅ shipped
 
-`ReminderPolicy`, `BuildReminderDigestUseCase`, `ReminderWorker` as a daily
-`PeriodicWorkRequest` per §7. Settings UI for the reminder window and quiet hours.
+`ReminderPolicy`, `BuildReminderDigestUseCase`, `ReminderWorker` per §7 — scheduled with
+`AlarmManager`, not `PeriodicWorkRequest` (§7.4). Settings UI for the reminder window and
+quiet hours.
 
 **Done when:** unit tests cover the batching rules — max 3 items, max 3 appearances per item,
 silence when the pool is empty, exclusion of resolved items — and the worker is verifiable
@@ -505,18 +532,78 @@ with `WorkManagerTestInitHelper`.
 
 Overlay capture was removed after Task 0. Do not implement it. See §11.
 
+### Task 7 — Tier 0 and Tier 1 classification ✅ shipped (v1.1)
+
+On-device only, no network, no entitlement check. `domain/classify/` with a
+`ContentClassifier` interface and two implementations chained by confidence.
+
+- **Tier 0, regex.** Dates and times, URLs, phone numbers, amounts, flight and order codes.
+  Deterministic, testable, and the only tier the reminder engine is allowed to depend on.
+- **Tier 1, on-device heuristics.** Coarse category from keyword and structure signals:
+  recipe, event, purchase, article, contact, unknown. Wrong answers are cheap here because
+  the category only orders the list; nothing acts on it.
+
+Results go in new nullable columns (`detectedCategory`, `detectedDateMillis`), migrated at
+version 3. Runs in the existing OCR worker, not on the capture path (§6.5).
+
+**Done:** 26 unit tests pass, including Czech and English samples per pattern; migration 2→3
+verified by upgrading over an existing install with real captures on the Honor; no code path
+reaches the network. Implementation decisions and field findings in §11.14.
+
+### Task 8 — `EntitlementProvider` becomes real ← next
+
+Replace the constant `true` binding from §11.2 with Google Play Billing. No feature changes
+in this task — it exists on its own so the billing path can be verified before anything
+depends on it.
+
+Non-negotiable behaviours:
+
+- Entitlement state is cached locally and **fails open on a network error**. A user who paid
+  must never be locked out because Play was unreachable on a train.
+- When entitlement lapses, previously generated AI output **stays visible and searchable**.
+  It was paid for. Only new generation stops.
+- Capture, reminders, search over own text, and export of own data are never gated (§11.2).
+
+**Done when:** license testers can buy, cancel, and restore; airplane mode does not revoke
+access; a lapsed account still sees its existing summaries.
+
+### Task 9 — Tier 3 cloud classification (paid)
+
+The paid surface. Sends captured **text** — never the image — to a cloud LLM for semantic
+titling, summarisation, and natural-language search.
+
+Privacy rules, which outrank the feature:
+
+- **Opt-in, off by default**, with a plain-language explanation of what leaves the device.
+- **Text only.** Screenshots contain banking apps, medical results, and private messages;
+  shipping the image raises the stakes far beyond what a nicer title is worth.
+- **Per-item veto.** Any item can be excluded, and exclusion is permanent for that row.
+- A visible indicator on any item whose text was sent. The user must be able to tell, later,
+  what left the device.
+
+Cost rules: one call per item maximum, result cached in the row, never re-sent on edit unless
+the user asks. Batch overnight rather than on capture — nothing here is urgent, and it keeps
+the capture path free of network latency.
+
+**Done when:** the free tier is fully usable with Tier 3 disabled, opt-out is honoured
+retroactively for future generation, and no code path can send an image.
+
 ---
 
 ## 9. Testing expectations
 
 Not exhaustive coverage, but these specific areas are where this app will break:
 
-- **Unit:** digest batching rules, dedup logic, permission state resolution.
+- **Unit:** digest batching rules, dedup logic, permission state resolution, Tier 0 date
+  parsing and Tier 1 category selection.
 - **Instrumented:** Room DAO queries and the unique-index collision behaviour.
 - **Manual checklist**, run before each release: screenshot capture on API 30 / 33 / 35;
   capture after reboot; capture with the screen having been off for several hours; partial
   photo grant on API 34+; share from Instagram, Chrome, and Gallery; overlay permission
-  revoked mid-session.
+  revoked mid-session; **upgrade over the previous install** so every migration actually runs.
+- **Test doubles count as production code.** A fake repository that no longer matches its
+  interface only fails when someone runs the tests, which can be several tasks later — see
+  §11.14.
 
 ## 10. Conventions
 
@@ -556,6 +643,7 @@ expensive to reverse later and cheap to honour now.
 installs, two rating pools, and a data migration when a user upgrades. Add
 `domain/billing/EntitlementProvider.kt` in Task 4:
 
+
 ```kotlin
 interface EntitlementProvider {
     /** Emits the current entitlement state. Hardcoded to true for all of v1. */
@@ -579,9 +667,330 @@ not affect the architecture above.
 
 ### 11.3 Deferred to v1.1 or later
 
-- Tiered on-device classification of captured text
 - Calendar integration
-- Reward mechanics — must be designed against §7.3, not around it
+
+Tiered classification and reward mechanics are no longer deferred: rewards shipped in §11.8,
+classification is specified as Tasks 7–9 with the paywall boundary in §11.12 and the shipped
+Tier 0/1 implementation in §11.14.
+
+### 11.4 Filtering the list (v1.1, shipped)
+
+The flat list became unreadable once it held more than a screenful. Three filter tabs replace
+it: Aktivní (`resolvedAt == null`), Vyřízené (`resolvedAt != null`), Vše. Filtering happens in
+`MainScreen` over the existing `Flow<List<CapturedItem>>` — no DAO or schema change.
+
+The visual model is a browser tab strip: the active tab and the list panel share one surface
+and are joined by a moving connector block, so the current filter reads as a physical position
+rather than a highlight.
+
+Decisions worth preserving:
+
+- **The panel colour is duplicated.** `FilterTabs.ConnectorColor` and the panel background in
+  `MainScreen` must hold the same value or a seam appears between them. Change both together.
+- **Square corners at the joint.** The active tab has square bottom corners, the panel square
+  top corners, and the connector overlaps into the panel by `ConnectorOverlap`. Rounding
+  either side produced a visible notch.
+- **`topStart` is conditional.** The panel's top-left corner is square only while Aktivní is
+  selected, because that tab sits directly above it.
+- **`tween`, not `spring`.** Spring animation on the connector overshot enough to read as
+  playful, which is noise on a screen whose job is to reduce noise.
+- All tunables live in one block at the top of `FilterTabs.kt`.
+
+Settled items grey out as a whole block — container colour and content alpha both animate, not
+just the label. Partial fading read as a rendering glitch rather than a state.
+
+### 11.5 Swipe between details (v1.1, shipped)
+
+`ItemDetailDialog` is a `HorizontalPager` over the list currently on screen, so swiping moves
+between items **within the active filter**. Swiping out of a filter would silently contradict
+what the user just chose.
+
+The dialog takes `items: List<CapturedItem>` plus an index rather than a single item, and the
+callbacks carry an id. It is declared after the filters are computed in `MainScreen` so the
+pager always receives exactly what the list shows. The `Surface` needs an explicit centring
+`Box` inside each page — the pager fills the width, the dialog does not.
+
+### 11.6 Capturing saved reels — investigated, not viable as asked
+
+The ask: when the user taps Save inside Instagram, YouTube or Facebook, SnapMind captures the
+post without a Share Sheet detour.
+
+**Not achievable.** An in-app save is a network call to that platform's own servers. It emits
+no broadcast, no MediaStore write, and no notification, so there is nothing on the device for
+an observer to see. The only mechanism that could observe it is an `AccessibilityService`
+watching for a tap on a node labelled Save — which is outside Play's accessibility policy, is
+killed by MagicOS power management (R2), and would grant SnapMind read access to the entire
+screen contents of every app. Not worth it for this feature.
+
+What remains available, in order of cost:
+
+1. **Share Sheet** (already shipped). One extra tap versus the platform's own save button.
+2. **YouTube Data API.** Liked videos and playlists are readable with OAuth, so YouTube saves
+   specifically *could* be polled. Instagram and Facebook expose no equivalent — the Basic
+   Display API is retired.
+3. **Link enrichment.** A shared reel currently arrives as text with no thumbnail and nothing
+   for OCR to read, which makes the card unidentifiable a week later — the exact failure the
+   thumbnail was added to fix (§11.4). Fetching the Open Graph image would close that gap and
+   benefits every shared link, not just reels.
+
+Item 3 is the one worth doing; it improves what already exists rather than chasing a capture
+path the platform does not expose.
+
+### 11.7 Link enrichment (v1.1, shipped)
+
+Shared links are enriched after the item is saved, never before: a slow or blocked request
+must not delay the capture, and a failure leaves the item exactly as it would have been.
+
+- `LinkMetadataFetcher` tries YouTube's public oEmbed endpoint first and falls back to Open
+  Graph scraping. **Verified on device: YouTube returns title and thumbnail reliably.**
+  Instagram and Facebook answer a logged-out request with a login page often enough that they
+  should be treated as best-effort.
+- Only the first ~120 KB of a page is read. Open Graph tags sit in the head; whole pages are
+  megabytes.
+- A browser `User-Agent` is required — without one most sites return a stub with no OG tags.
+- **No schema change.** The URL goes in `extractedText` (search material, same as OCR output),
+  the title in `userNote` while the user has not written their own, the thumbnail in
+  `imageUri`. `isProcessed = true` keeps ML Kit away from an `https` URL it cannot read.
+- Source is shown as a coloured dot plus a word (`LinkPlatform`), not a brand logo. Logos are
+  licensed assets and would need re-cutting at every rebrand.
+- **Instagram works in practice**, contrary to the expectation above: a logged-out request
+  returns usable OG tags for public reels. Verified on device.
+- HTML entities must be decoded numerically, not from a named table. Instagram writes captions
+  as `&#x11b;`-style escapes, so Czech text arrives visibly broken otherwise. `&amp;` is
+  decoded last, or `&amp;#39;` becomes a live entity.
+
+### 11.8 Settle reward (v1.1, shipped)
+
+Two buttons in the detail dialog remove an item from Aktivní, and the difference between them
+is the whole point:
+
+- **Fajfka (`Check`) = Vyřízeno.** Rewards.
+- **Koš (`Delete`) = Odloženo.** Silent — no haptic, no bounce.
+
+Rewarding both would train deletion instead of follow-through. `resolution` (`DONE` /
+`DISCARDED`, nullable) records which, migrated at version 2 with existing resolved rows read
+as `DONE`.
+
+Guiding rule, and the reason this does not violate §7.3: **reward the action, never the
+state.** Every banned pattern — badges, streaks, counts — stays visible while the user does
+nothing, and so punishes absence. This exists for roughly half a second and leaves no record.
+
+Field findings, both of which cost a round trip:
+
+- **The reward cannot live on the list card.** In the Aktivní filter a settled item leaves the
+  list the instant it settles, so the animation plays on a composable already being disposed —
+  behind a dialog, at that. It has to be on the button that was pressed.
+- **`View.performHapticFeedback` does nothing on MagicOS.** `CONFIRM` is silently ignored, the
+  same failure shape as §11.1. Use `Vibrator` / `VibrationEffect` directly. `VIBRATE` permission
+  required.
+- **The rare variant must differ in kind, not degree.** A 1.18 versus 1.35 scale peak on a 40dp
+  button is about seven pixels over 200ms and is not perceptible. A second bounce and a
+  different vibration rhythm are. Intensity is what a phone in a pocket conveys worst; rhythm
+  is what it conveys best.
+
+Variable reward (1 in `RareOdds`, currently 6) is deliberate. It is also the slot-machine
+mechanism, so the terms are kept fair: the bet is on doing something genuinely useful, and the
+ordinary outcome costs nothing.
+
+### 11.9 Settle animation variants (v1.1, shipped)
+
+The bounce was one animation. It would have stopped registering once it became familiar, which
+is the known failure mode of any fixed reward. `SettleButton` now draws one of seven at random
+on every settle, split into the same two tiers as the vibration pattern (§11.8):
+
+- **Common** (~5 in 6): `BOUNCE` (the original scale bump), `POP` (a quick compress and
+  rebound), `TILT` (a small `rotationZ` lean, direction randomised, and back), `NUDGE` (a small
+  sideways `translationX` shift and back).
+- **Rare** (~1 in 6): `FLIP` (`rotationY` through 360°), `SPIN` (`rotationZ` through 360° with a
+  simultaneous scale bump), `DOUBLE_POP` (the original two-stage bounce).
+
+Implementation notes:
+
+- One `Modifier.graphicsLayer { }` carries `scaleX`/`scaleY`, `rotationZ`, `rotationY`, and
+  `translationX` together, driven by four separate `Animatable`s. Stacking `Modifier.scale` and
+  a rotate modifier instead would apply the transforms in a fixed order, which fights `SPIN`
+  where scale and rotation animate at once.
+- Each variant is a `private suspend fun` that leaves every `Animatable` it touched back at its
+  rest value before returning; `SettleButton` awaits the whole animation and only then calls
+  `onSettled()`, so nothing is ever seen mid-motion.
+- Tier selection reuses the same `rare` draw already used for `settleVibration` — the pattern
+  and the animation tier agree by construction, never independently rolled.
+- Selection within a tier is a uniform `entries.filter { it.tier == tier }.random()`. There is
+  no ordering, weighting, or rarity between variants inside a tier — a completable set is a
+  streak wearing a different hat, and §7.3 already bans that. Commented in code so it stays
+  that way.
+
+Constraints carried over from §11.8, unchanged: every variant stays within its tier's time
+budget (~350ms common, ~600ms rare), leaves no persistent state, and never appears on the koš
+button.
+
+### 11.10 Search and retrospect (v1.1, shipped)
+
+Searching and looking back are the same screen (`SearchScreen` + `SearchViewModel`), reached
+only from the search icon next to Nastavení on `MainScreen` — never opened by the app itself,
+never surfaced by a notification.
+
+- **Search.** `CapturedItemDao.search` matches `userNote` or `extractedText` with `LIKE`;
+  `extractedText` already holds both OCR output and shared URLs, so one query covers both.
+  Archived items (`isArchived`, §7.2) are deliberately not filtered out — this is what finally
+  makes the quiet archive reachable, instead of only findable by scrolling. The query is
+  debounced 250ms in the ViewModel (`flatMapLatest` over the debounced text) so a `LIKE` isn't
+  fired per keystroke.
+- **An empty query never hits the database.** Guarded in `SearchViewModel`, not in SQL — an
+  unguarded `LIKE '%' || '' || '%'` would silently return the entire table.
+- **Retrospect.** A "Vyřízené" switch, visible only while the query is blank, shows items with
+  `resolution == DONE`, newest first — filtered client-side from the existing `observeAll()`
+  flow rather than a second DAO query, the same way `MainScreen`'s filter tabs already work.
+- **The card is shared, not duplicated.** `CapturedItemCard` moved from `MainScreen` to
+  `presentation/components/`, unchanged, so both screens render identically. `ItemDetailDialog`
+  opens the same way, swipe included, over whichever list is currently on screen.
+- **No count, ever** — not on the toggle, not on the search icon, not "N results". Any of those
+  turns a list back into a badge (§7.3), which is the one thing this screen exists to avoid
+  while still making the archive reachable.
+
+### 11.11 Missing image after gallery deletion (v1.1, shipped)
+
+Deleting the screenshot from the gallery — after SnapMind already saved the row — left the
+card's thumbnail permanently blank: coil kept `imageUri` pointing at a `content://` Uri the
+`MediaStore` no longer served, so the image slot just rendered nothing where a thumbnail used
+to be, indistinguishable from "still loading".
+
+**The row is never deleted for this.** §7.2 is explicit that a captured item is never deleted,
+only stops being reminded about — the note and the OCR text are frequently the part worth
+keeping, and they routinely outlive the picture (a reminder about a recipe screenshot is still
+useful after the screenshot itself is gone). Losing the row because the *image* went missing
+would silently violate that guarantee for a failure that has nothing to do with the user's
+notes.
+
+- **Detection is `AsyncImage`'s `onError` callback, not a pre-check.** Stat-ing the file before
+  rendering would be I/O inside composition, and would still race a user who deletes the image
+  between the check and the render — `onError` is the only point that actually knows the load
+  failed.
+- **`MissingImagePlaceholder`** (`presentation/components/`) is shared by `CapturedItemCard`
+  (56dp, matching the thumbnail it replaces) and `ItemDetailDialog` (a fixed 200dp band, since
+  there is no intrinsic image size to size a `heightIn(max = …)` box against once the image
+  itself is gone). Muted `surfaceVariant` background, `Icons.Default.ImageNotSupported` at
+  ~0.4 alpha, no error colour, no exclamation mark: deleting your own screenshot is an
+  ordinary, expected action, not a fault the app needs to flag.
+- **The failure flag is keyed on `(item.id, item.imageUri)`,** not just the id. Link enrichment
+  (§11.7) can fill `imageUri` in after the row already exists; keying on the uri too means a
+  stale "failed" flag from a prior uri can never suppress a legitimately new image.
+- **"Open in gallery" hides itself once the image has failed to load.** Showing it would open
+  either an empty intent or the gallery's own error, which is a worse outcome than not offering
+  the button.
+- **Text-only shares are unaffected.** The placeholder only triggers on an `imageUri` that
+  failed to *load* — an item with `imageUri == null` (a shared link with no thumbnail, or a
+  share that never had an image) renders exactly as before.
+
+### 11.12 Where the AI paywall sits — decided before building
+
+§11.2 fixed the rule: capture and reminders are free permanently, paid surface belongs in
+retrieval and organisation. Tiered classification is the first feature that has to be split
+along that line, so the split is written down before any of it exists.
+
+| Tier | What it does | Runs | Gated |
+|---|---|---|---|
+| 0 | Regex: dates, URLs, phone numbers, amounts | On device | Never |
+| 1 | Coarse category from keywords and structure | On device | Never |
+| 2 | *Reserved.* On-device small model, if one ever fits | On device | Undecided |
+| 3 | Semantic titles, summaries, natural-language search | Cloud LLM | **Paid** |
+
+**Tier 0 is free because the reminder engine depends on it.** A screenshot of a ticket that
+knows its own date produces a better-timed reminder, and reminders are free. Gating Tier 0
+would gate reminders through the back door.
+
+**Tier 3 is paid because it costs money per call.** That is the honest reason and the only one
+that holds up. It is not made deliberately worse to sell the upgrade, and the free tier has to
+stay genuinely usable — the app's premise is that a thought is not lost between noticing it
+and writing it down, and a paywall anywhere near that moment contradicts §7.
+
+**Lapsed entitlement never deletes anything.** Summaries already generated stay visible and
+searchable. Only new generation stops. Anything else would mean paying for something that can
+be taken away, which is not what was sold.
+
+**The image never leaves the device, at any tier.** Text only, opt-in, per-item veto, with a
+visible marker on rows that were sent. Screenshots are the most private thing on a phone; that
+constraint is not negotiable against product convenience later.
+
+### 11.13 Colour palettes & light/dark mode (v1.1, shipped)
+
+Settings gained two independent choices: a colour palette and a light/dark mode — six palettes
+times three modes. The default after the update reproduces the app's pre-existing look
+byte-for-byte (Violet, Dark), so this ships as a preference nobody has to notice.
+
+- **`presentation/theme/Palette.kt` is the only source of truth for colour.** `SnapMindPalette`
+  holds twelve roles (`accent`, `accentMuted`, `secondary`, `background`, `panel`,
+  `surfaceRaised`, `surfaceRaisedHigh`, `settled`, `onSurface`, `onSurfaceFaded`, `onSettled`,
+  `outline`); `paletteFor(choice, dark)` resolves one of `PaletteChoice` — `VIOLET` (default),
+  `TERRACOTTA`, `DUSTYROSE`, `SAGE`, `COMFORTBEIGE`, `POWDERBLUE` — against `dark: Boolean`. **No
+  `Color(0xFF...)` literal is permitted anywhere else under `presentation/`.** Every screen reads
+  colour through `LocalSnapMindPalette.current`, or through the Material3 `colorScheme` that
+  `SnapMindTheme` builds from it — never a hardcoded hex.
+- **Values are generated in OKLCH at a fixed lightness per role**, not picked by eye per palette.
+  Switching `PaletteChoice` changes hue, not the measured contrast of any role against the
+  surface it sits on — a palette swap can never turn readable text unreadable.
+- **`settled` / `onSettled` replace alpha for a done item.** `CapturedItemCard` used to fade a
+  resolved item with `.alpha()`; opacity multiplies with whatever sits behind it, so the same
+  alpha value read differently on every palette. `settled` and `onSettled` are separate,
+  pre-verified roles that hold the palette's own tone while losing saturation — **never alpha,
+  never a neutral grey**, which would read as an application error rather than "done" on a
+  tonally-coloured palette. The thumbnail is exempt: it stays fully saturated, since it remains
+  the only thing that still identifies a settled item at a glance.
+- **`SettingsDataStore` persists the choice under the `palette` and `theme_mode` keys**
+  (string-backed `PaletteChoice`/`ThemeMode`, parsed with `runCatching { enumValueOf(...) }` so
+  an unknown or corrupted stored value falls back instead of crashing the app). Default is
+  `PaletteChoice.VIOLET` + `ThemeMode.DARK` — the pre-existing look. `ThemeMode` is `SYSTEM` /
+  `LIGHT` / `DARK`; `SYSTEM` resolves against `isSystemInDarkTheme()` where `SnapMindTheme` is
+  composed.
+- **`SettingsScreen`'s back action goes through `BackHandler`, not only the system back
+  gesture.** On the MagicOS 9.0 test device the system back gesture is occasionally swallowed
+  before it reaches the app, so an explicit in-app back arrow plus `BackHandler` are used instead
+  of relying on the system back stack alone.
+
+### 11.14 Tier 0 a Tier 1 klasifikace (v1.1, shipped)
+
+Task 7 běží na zařízení, bez sítě, v existujícím OCR workeru. `domain/classify/` obsahuje
+`ContentClassifier` (rozhraní), `Tier0RegexClassifier`, `Tier1KeywordClassifier` a
+`ChainedContentClassifier`; navenek je vidět jen rozhraní, vázané v `di/ClassifyModule.kt`.
+Výsledek jde do `detectedCategory` (název enumu, nikdy ordinal) a `detectedDateMillis`,
+migrace `MIGRATION_2_3` přidává oba sloupce jako nullable.
+
+Rozhodnutí, která stojí za uchování:
+
+- **Tier 0 nesmí být pravděpodobnostní.** Kategorii vrací jen u jednoznačné kombinace signálů
+  (částka + kód → PURCHASE, datum + čas → EVENT, telefon → CONTACT), jinak UNKNOWN a slovo
+  přebírá Tier 1. Připomínkový engine smí záviset jen na Tier 0 (§11.12), takže tam nesmí být
+  nic, co si "tipne".
+- **Datum bez roku se posouvá dopředu.** "15. 3." vyfocené v prosinci míří na březen
+  následujícího roku. Bez tohoto pravidla by lístek generoval připomínku v minulosti, kterou
+  digest nikdy nezobrazí.
+- **Datum bez času míří na poledne, ne na půlnoc.** Půlnoc spadne uživateli na předchozí večer.
+- **České měsíce se testují od nejdelšího prefixu.** "července" jinak projde jako "červen" —
+  `startsWith("cerven")` je pravda pro obojí. Diakritika se před porovnáním odstraňuje.
+- **`\w` nematchuje diakritiku.** Kód objednávky proto nejde hledat jako
+  `objedn\w*\W{0,12}(KÓD)`: v "Objednávka AB12345" se `\W` zastaví na "á" a přes "vka" se
+  nedostane. Používá se `[\s\S]{0,25}?` a kód musí obsahovat číslici, aby "ORDER CONFIRMED"
+  neprošlo jako kód.
+- **Telefon a datum se nesmí prolnout.** Telefon je vázaný na devět číslic v českém členění,
+  datum na oddělovač `.` nebo `/`, takže "+420 777 123 456" nikdy nevrátí datum.
+- **Klasifikace čte OCR text i uživatelovu poznámku dohromady.** Poznámka je často jediné
+  místo, kde datum je ("zítra vyzvednout").
+
+Provozní poznámky z aplikace:
+
+- Migrace 2→3 se ověřuje **upgradem přes existující instalaci**, ne čistou instalací — jinak se
+  nikdy nespustí a rozbití se pozná až u uživatele s reálnými daty.
+- Unit testy odhalily, že `FakeRepository` v `BuildReminderDigestUseCaseTest` byl rozejitý
+  s `CapturedItemRepository` (chyběly `updateImageUri`, `markDiscarded`, `search`, byl tam
+  neexistující `markResolved`). **Každý nový člen repozitáře patří ve stejném commitu i do
+  fake** — testovací zdrojáky se kompilují jen při spuštění testů, takže drift zůstane skrytý
+  klidně přes několik tasků.
+- 26 unit testů prochází; klasifikace nemá žádnou závislost na Androidu, takže jde testovat
+  obyčejným JUnit během sekund.
+
+Co zbývá: kategorie zatím nikde není vidět, jen leží v databázi. Zobrazení na kartě je vědomě
+odložené — jakmile se ukáže, je to informace na každém řádku a musí projít testem §7.3
+(nesmí z toho být počítadlo ani odznak).
 
 ## 12. Open questions for the next hardware pass
 
@@ -594,3 +1003,6 @@ not affect the architecture above.
 4. How long hibernation takes to trigger in practice, and whether the whitelist survives an
    app update. This determines whether the §5.3 banner is sufficient or whether the app needs
    to actively re-prompt (R8).
+5. Jestli české datumy z reálného OCR (ML Kit občas vrací "15 . 3 ." s mezerami kolem tečky)
+   projdou `Tier0RegexClassifier` — v testech ano, na reálných screenshotech zatím jen jeden
+   vzorek.

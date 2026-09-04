@@ -64,8 +64,11 @@
     <string name="detail_recognised_text">Recognised text</string>
     <string name="detail_show_text">Show recognised text</string>
     <string name="detail_open_gallery">Open in gallery</string>
-    <string name="detail_discard">Discard</string>
+    <string name="detail_discard">Vyřízeno</string>
+    <string name="detail_trash">Odložit</string>
+    <string name="detail_restore">Bring back</string>
     <string name="detail_close">Close</string>
+    <string name="detail_image_missing">Obrázek už v galerii není</string>
 
     <!-- Daily reminder -->
     <string name="channel_reminder_name">Daily reminder</string>
@@ -73,8 +76,22 @@
     <string name="digest_title">A few things you saved</string>
     <string name="digest_item_untitled">Screenshot</string>
 
+    <!-- Search and retrospect -->
+    <string name="search_action">Search</string>
+    <string name="search_title">Search</string>
+    <string name="search_back">Back</string>
+    <string name="search_hint">Search notes and text…</string>
+    <string name="search_retrospect_toggle">Vyřízené</string>
+    <string name="search_empty_prompt">Type a few words from a note or the text in a screenshot.</string>
+    <string name="search_no_results">Nothing found yet.</string>
+
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_mode_title">Režim</string>
+    <string name="settings_mode_system">Systém</string>
+    <string name="settings_mode_light">Světlý</string>
+    <string name="settings_mode_dark">Tmavý</string>
+    <string name="settings_palette_title">Paleta</string>
     <string name="settings_reminder_title">Reminder time</string>
     <string name="settings_reminder_body">One reminder a day, at most three items. Never more than that.</string>
     <string name="settings_quiet_start_title">Quiet from</string>

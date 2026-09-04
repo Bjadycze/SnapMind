@@ -83,4 +83,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.coroutines.test)
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

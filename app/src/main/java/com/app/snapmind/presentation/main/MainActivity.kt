@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.app.snapmind.presentation.onboarding.OnboardingScreen
+import com.app.snapmind.presentation.search.SearchScreen
 import com.app.snapmind.presentation.settings.SettingsScreen
 import com.app.snapmind.presentation.theme.SnapMindTheme
 import com.app.snapmind.presentation.settings.SettingsViewModel
@@ -41,11 +42,14 @@ class MainActivity : ComponentActivity() {
         settingsViewModel.ensureScheduled()
 
         setContent {
-            SnapMindTheme {
+            val settingsState by settingsViewModel.state.collectAsStateWithLifecycle()
+
+            SnapMindTheme(palette = settingsState.palette, mode = settingsState.themeMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
                     var showOnboarding by remember { mutableStateOf(false) }
                     var showSettings by remember { mutableStateOf(false) }
+                    var showSearch by remember { mutableStateOf(false) }
 
                     when {
                         // null means DataStore has not answered yet: render nothing rather
@@ -63,9 +67,16 @@ class MainActivity : ComponentActivity() {
                             onBack = { showSettings = false }
                         )
 
+                        // Reached only by the search icon (spec.md 11.10/7.3): never opened by
+                        // this app on its own, never by a notification.
+                        showSearch -> SearchScreen(
+                            onBack = { showSearch = false }
+                        )
+
                         else -> MainScreen(
                             onFixPermissions = { showOnboarding = true },
-                            onOpenSettings = { showSettings = true }
+                            onOpenSettings = { showSettings = true },
+                            onOpenSearch = { showSearch = true }
                         )
                     }
                 }
