@@ -58,6 +58,15 @@
     <string name="item_settled">%1$s · done</string>
     <string name="main_settings">Settings</string>
 
+    <!-- Category strip on the card (spec.md 11.14). UNKNOWN deliberately has no label. -->
+    <string name="category_event">událost</string>
+    <string name="category_recipe">recept</string>
+    <string name="category_purchase">nákup</string>
+    <string name="category_article">článek</string>
+    <string name="category_contact">kontakt</string>
+    <string name="card_settle_question">Hotovo?</string>
+    <string name="card_settle_confirm">Hotovo</string>
+
     <!-- Item detail -->
     <string name="detail_note_label">Note</string>
     <string name="detail_note_hint">What was this for?</string>
