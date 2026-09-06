@@ -45,6 +45,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.app.snapmind.R
 import com.app.snapmind.domain.model.CapturedItem
+import com.app.snapmind.presentation.components.CategoryPicker
 import com.app.snapmind.presentation.components.MissingImagePlaceholder
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -93,7 +94,15 @@ fun ItemDetailDialog(
     onSaveNote: (Long, String) -> Unit,
     onDone: (Long) -> Unit,
     onDiscard: (Long) -> Unit,
-    onRestore: (Long) -> Unit
+    onRestore: (Long) -> Unit,
+    /** The user's own categories, in the order they were added (spec.md 11.16). */
+    customCategories: List<String> = emptyList(),
+    /** Removed names, offered back when adding so nothing has to be retyped. */
+    retiredCategories: List<String> = emptyList(),
+    /** Sets the manual category; null clears it back to whatever the classifier guessed. */
+    onPickCategory: ((Long, String?) -> Unit)? = null,
+    /** Creates (or revives) a category and puts it on this item. */
+    onCreateCategory: ((Long, String) -> Unit)? = null
 ) {
     if (items.isEmpty()) return
 
@@ -233,6 +242,16 @@ fun ItemDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )
+
+                if (onPickCategory != null) {
+                    CategoryPicker(
+                        selected = item.effectiveCategory,
+                        custom = customCategories,
+                        retired = retiredCategories,
+                        onPick = { value -> onPickCategory(item.id, value) },
+                        onCreate = { name -> onCreateCategory?.invoke(item.id, name) }
+                    )
+                }
 
                 AnimatedVisibility(
                     visible = showOcr && item.extractedText.isNotBlank(),

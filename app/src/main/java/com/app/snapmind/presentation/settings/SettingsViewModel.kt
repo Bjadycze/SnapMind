@@ -3,6 +3,7 @@ package com.app.snapmind.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.snapmind.data.prefs.SettingsDataStore
+import com.app.snapmind.domain.repository.CapturedItemRepository
 import com.app.snapmind.presentation.theme.PaletteChoice
 import com.app.snapmind.presentation.theme.ThemeMode
 import com.app.snapmind.service.worker.ReminderScheduler
@@ -15,6 +16,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** One of the user's categories, plus whether anything unresolved still uses it. */
+data class CustomCategory(val name: String, val inUse: Boolean)
+
 data class SettingsUiState(
     val reminderHour: Int = 18,
     val quietStartHour: Int = 22,
@@ -26,8 +30,30 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settings: SettingsDataStore,
+    private val repository: CapturedItemRepository,
     private val scheduler: ReminderScheduler
 ) : ViewModel() {
+
+    /**
+     * The user's own categories, each with whether an unresolved item still uses it
+     * (spec.md 11.16). A category in use cannot be removed -- the row would keep showing a
+     * name that is no longer offered, which reads as a bug rather than a choice.
+     */
+    val categories: StateFlow<List<CustomCategory>> = combine(
+        settings.customCategories,
+        repository.observeAll()
+    ) { names, items ->
+        val inUse = items
+            .filter { it.resolvedAt == null }
+            .mapNotNull { it.userCategory?.lowercase() }
+            .toSet()
+        names.map { CustomCategory(it, inUse.contains(it.lowercase())) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Stops offering a category. The name is kept and offered back when adding (spec.md 7.2). */
+    fun retireCategory(name: String) {
+        viewModelScope.launch { settings.retireCustomCategory(name) }
+    }
 
     val state: StateFlow<SettingsUiState> = combine(
         settings.reminderHour,

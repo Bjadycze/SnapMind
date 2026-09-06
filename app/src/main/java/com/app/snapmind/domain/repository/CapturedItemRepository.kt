@@ -42,6 +42,9 @@ interface CapturedItemRepository {
     suspend fun delete(item: CapturedItem)
 
     suspend fun updateClassification(id: Long, category: String?, dateMillis: Long?)
+
+    /** The category the user set by hand; null clears it back to the classifier's guess. */
+    suspend fun updateUserCategory(id: Long, category: String?)
     /**
      * Matches `userNote` or `extractedText`, archived items included -- spec.md 11.10/7.2.
      * An empty query must not be sent here as a wildcard match-everything; guard it at the

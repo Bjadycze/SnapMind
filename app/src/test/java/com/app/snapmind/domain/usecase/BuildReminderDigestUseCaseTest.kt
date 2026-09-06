@@ -60,6 +60,7 @@ class BuildReminderDigestUseCaseTest {
         override suspend fun delete(item: CapturedItem) = Unit
         override suspend fun updateImageUri(id: Long, uri: String) {}
         override suspend fun updateClassification(id: Long, category: String?, dateMillis: Long?) {}
+        override suspend fun updateUserCategory(id: Long, category: String?) {}
     }
 
     private fun item(

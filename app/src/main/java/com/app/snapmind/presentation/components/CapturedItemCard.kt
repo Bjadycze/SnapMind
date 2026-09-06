@@ -181,7 +181,8 @@ fun CapturedItemCard(
             contentAlignment = Alignment.CenterEnd
         ) {
             CategoryEdgeTab(
-                category = item.detectedCategory,
+                // The manual choice wins over the guess (spec.md 11.16).
+                category = item.effectiveCategory,
                 settled = settled,
                 cardWidth = cardWidth,
                 onSettle = if (settled) null else onSettle,

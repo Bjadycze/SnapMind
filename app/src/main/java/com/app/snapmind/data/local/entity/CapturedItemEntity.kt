@@ -33,7 +33,8 @@ data class CapturedItemEntity(
     val resolvedAt: Long? = null,
     val resolution: Resolution? = null,
     val detectedCategory: String? = null,
-    val detectedDateMillis: Long? = null
+    val detectedDateMillis: Long? = null,
+    val userCategory: String? = null
 )
 
 fun CapturedItemEntity.toDomain() = CapturedItem(
@@ -50,7 +51,8 @@ fun CapturedItemEntity.toDomain() = CapturedItem(
     resolvedAt = resolvedAt,
     resolution = resolution,
     detectedCategory = detectedCategory,
-    detectedDateMillis = detectedDateMillis
+    detectedDateMillis = detectedDateMillis,
+    userCategory = userCategory
 )
 
 fun CapturedItem.toEntity() = CapturedItemEntity(
@@ -67,5 +69,6 @@ fun CapturedItem.toEntity() = CapturedItemEntity(
     resolvedAt = resolvedAt,
     resolution = resolution,
     detectedCategory = detectedCategory,
-    detectedDateMillis = detectedDateMillis
+    detectedDateMillis = detectedDateMillis,
+    userCategory = userCategory
 )

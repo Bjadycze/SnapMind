@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.snapmind.R
+import com.app.snapmind.presentation.theme.LocalSnapMindPalette
 import com.app.snapmind.presentation.theme.PaletteChoice
 import com.app.snapmind.presentation.theme.ThemeMode
 import com.app.snapmind.presentation.theme.paletteFor
@@ -39,6 +40,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +51,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
 
     BackHandler(onBack = onBack)
 
@@ -106,6 +109,65 @@ fun SettingsScreen(
             onChange = { viewModel.setQuietHours(state.quietStartHour, it) }
         )
 
+        // Only shown once the user has made one: an empty section would be a setting for
+        // something that does not exist yet.
+        if (categories.isNotEmpty()) {
+            CustomCategoriesSetting(
+                categories = categories,
+                onRemove = viewModel::retireCategory
+            )
+        }
+    }
+}
+
+/**
+ * The user's own categories (spec.md 11.16). Removing one only stops it being offered -- the
+ * name is kept and comes back as a suggestion the next time a category is added, and items
+ * already carrying it keep showing it (spec.md 7.2).
+ */
+@Composable
+private fun CustomCategoriesSetting(
+    categories: List<CustomCategory>,
+    onRemove: (String) -> Unit
+) {
+    val palette = LocalSnapMindPalette.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.settings_categories_title),
+            style = MaterialTheme.typography.titleSmall
+        )
+
+        categories.forEach { category ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = category.name,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    if (category.inUse) {
+                        Text(
+                            text = stringResource(R.string.settings_category_in_use),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = palette.onSurfaceFaded
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = { onRemove(category.name) },
+                    enabled = !category.inUse
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.settings_category_remove)
+                    )
+                }
+            }
+        }
     }
 }
 

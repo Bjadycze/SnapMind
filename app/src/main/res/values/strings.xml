@@ -67,6 +67,17 @@
     <string name="card_settle_question">Hotovo?</string>
     <string name="card_settle_confirm">Hotovo</string>
 
+    <!-- Ruční kategorie (spec.md 11.16) -->
+    <string name="detail_category_label">Kategorie</string>
+    <string name="category_none">neurčeno</string>
+    <string name="category_add">+ vlastní</string>
+    <string name="category_add_hint">Název, třeba Zahrada</string>
+    <string name="category_add_confirm">Přidat</string>
+    <string name="category_previously_used">Dřív používané:</string>
+    <string name="settings_categories_title">Vlastní kategorie</string>
+    <string name="settings_category_in_use">používá ji položka v Aktivní</string>
+    <string name="settings_category_remove">Odebrat</string>
+
     <!-- Item detail -->
     <string name="detail_note_label">Note</string>
     <string name="detail_note_hint">What was this for?</string>

@@ -18,8 +18,18 @@ data class CapturedItem(
     val resolvedAt: Long? = null,
     val resolution: Resolution? = null,
     val detectedCategory: String? = null,
-    val detectedDateMillis: Long? = null
+    val detectedDateMillis: Long? = null,
+    /**
+     * The category the user picked by hand -- a DetectedCategory name, a custom name of their
+     * own, or null when they never touched it (spec.md 11.16). Kept apart from
+     * detectedCategory so "the classifier was wrong" stays distinguishable from "the
+     * classifier had no idea".
+     */
+    val userCategory: String? = null
 ) {
+    /** What the UI shows and filters by: the manual choice wins, the guess is the fallback. */
+    val effectiveCategory: String? get() = userCategory ?: detectedCategory
+
     /** An item is out of the digest pool once the user has acted on it. */
     val isResolved: Boolean get() = resolvedAt != null
 

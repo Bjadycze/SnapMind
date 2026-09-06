@@ -2,6 +2,7 @@ package com.app.snapmind.presentation.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.snapmind.data.prefs.SettingsDataStore
 import com.app.snapmind.domain.model.CapturedItem
 import com.app.snapmind.domain.model.Resolution
 import com.app.snapmind.domain.repository.CapturedItemRepository
@@ -36,8 +37,26 @@ private const val SearchResultLimit = 200
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val repository: CapturedItemRepository
+    private val repository: CapturedItemRepository,
+    private val settings: SettingsDataStore
 ) : ViewModel() {
+
+    /** Same category editing as on the main screen -- the dialog is the same dialog. */
+    val customCategories: StateFlow<List<String>> = settings.customCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val retiredCategories: StateFlow<List<String>> = settings.retiredCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setCategory(itemId: Long, value: String?) {
+        viewModelScope.launch { repository.updateUserCategory(itemId, value) }
+    }
+
+    fun createCategory(itemId: Long, name: String) {
+        viewModelScope.launch {
+            settings.addCustomCategory(name)?.let { repository.updateUserCategory(itemId, it) }
+        }
+    }
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
@@ -84,10 +103,9 @@ class SearchViewModel @Inject constructor(
     }
 
     fun updateNote(itemId: Long, note: String) {
-        viewModelScope.launch {
-            repository.updateNote(itemId, note.trim())
-            repository.markDone(itemId)
-        }
+        // Writing a note is not settling: only the fajfka and the koš set resolvedAt
+        // (spec.md 7.2, corrected in v1.1).
+        viewModelScope.launch { repository.updateNote(itemId, note.trim()) }
     }
 
     fun markDone(itemId: Long) {

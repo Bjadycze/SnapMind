@@ -35,11 +35,18 @@ object DatabaseModule {
         }
     }
 
+    /** Adds `userCategory` (spec.md 11.16): the category the user set by hand, if any. */
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE captured_items ADD COLUMN userCategory TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SnapMindDatabase =
         Room.databaseBuilder(context, SnapMindDatabase::class.java, SnapMindDatabase.NAME)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
     @Provides

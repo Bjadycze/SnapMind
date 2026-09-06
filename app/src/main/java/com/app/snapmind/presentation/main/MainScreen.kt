@@ -59,6 +59,9 @@ fun MainScreen(
     // the same string the row carries, so nothing has to be parsed to compare.
     var categoryFilter by remember { mutableStateOf<String?>(null) }
 
+    val customCategories by viewModel.customCategories.collectAsStateWithLifecycle()
+    val retiredCategories by viewModel.retiredCategories.collectAsStateWithLifecycle()
+
     // Held by id, not by value: the item must re-read from the flow after an edit so the
     // dialog shows what was actually saved.
     var openItemId by remember { mutableStateOf<Long?>(null) }
@@ -107,14 +110,14 @@ fun MainScreen(
                 ItemFilter.ACTIVE -> state.active.filter { it.resolvedAt == null }
                 ItemFilter.DONE -> state.active.filter { it.resolvedAt != null }
                 ItemFilter.ALL -> state.active
-            }.filter { matchesCategoryFilter(it.detectedCategory, categoryFilter) }
+            }.filter { matchesCategoryFilter(it.effectiveCategory, categoryFilter) }
         }
         val filteredArchived = remember(state.archived, selectedFilter, categoryFilter) {
             when (selectedFilter) {
                 ItemFilter.ACTIVE -> state.archived.filter { it.resolvedAt == null }
                 ItemFilter.DONE -> state.archived.filter { it.resolvedAt != null }
                 ItemFilter.ALL -> state.archived
-            }.filter { matchesCategoryFilter(it.detectedCategory, categoryFilter) }
+            }.filter { matchesCategoryFilter(it.effectiveCategory, categoryFilter) }
         }
 
         // The trap this closes: filter by one category, settle the last item in it, and the list
@@ -146,7 +149,11 @@ fun MainScreen(
                 },
                 // Deliberately keeps the dialog open: the card fades behind it, which is the
                 // confirmation that something changed.
-                onRestore = { id -> viewModel.restore(id) }
+                onRestore = { id -> viewModel.restore(id) },
+                customCategories = customCategories,
+                retiredCategories = retiredCategories,
+                onPickCategory = { id, value -> viewModel.setCategory(id, value) },
+                onCreateCategory = { id, name -> viewModel.createCategory(id, name) }
             )
         }
 
@@ -197,11 +204,11 @@ fun MainScreen(
                         // clear. An unclassified item has nothing to filter by, so its strip
                         // stays inert.
                         onFilterCategory = {
-                            val key = categoryFilterKey(item.detectedCategory)
+                            val key = categoryFilterKey(item.effectiveCategory)
                             categoryFilter = if (categoryFilter == key) null else key
                         },
                         categorySelected = categoryFilter != null &&
-                            matchesCategoryFilter(item.detectedCategory, categoryFilter)
+                            matchesCategoryFilter(item.effectiveCategory, categoryFilter)
                     )
                 }
 
@@ -228,11 +235,11 @@ fun MainScreen(
                         // clear. An unclassified item has nothing to filter by, so its strip
                         // stays inert.
                         onFilterCategory = {
-                            val key = categoryFilterKey(item.detectedCategory)
+                            val key = categoryFilterKey(item.effectiveCategory)
                             categoryFilter = if (categoryFilter == key) null else key
                         },
                         categorySelected = categoryFilter != null &&
-                            matchesCategoryFilter(item.detectedCategory, categoryFilter)
+                            matchesCategoryFilter(item.effectiveCategory, categoryFilter)
                     )
                     }
                 }

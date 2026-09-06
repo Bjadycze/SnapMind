@@ -83,10 +83,20 @@ private const val SelectedTint = 0.55f  // výplň štítku, když je podle něj
  */
 const val UnclassifiedFilterKey = "__unclassified__"
 
-/** The value a tap on this item's strip filters by. Never null: everything belongs somewhere. */
+/**
+ * The value a tap on this item's strip filters by. Never null: everything belongs somewhere.
+ * A name that is not a DetectedCategory is one of the user's own (spec.md 11.16) and filters
+ * by itself.
+ */
 fun categoryFilterKey(category: String?): String {
-    val parsed = category?.let { runCatching { DetectedCategory.valueOf(it) }.getOrNull() }
-    return parsed?.takeIf { it != DetectedCategory.UNKNOWN }?.name ?: UnclassifiedFilterKey
+    val value = category?.trim().orEmpty()
+    if (value.isEmpty()) return UnclassifiedFilterKey
+    val parsed = runCatching { DetectedCategory.valueOf(value) }.getOrNull()
+    return when {
+        parsed == null -> value
+        parsed == DetectedCategory.UNKNOWN -> UnclassifiedFilterKey
+        else -> parsed.name
+    }
 }
 
 /** True when the item belongs in the currently filtered group. A null filter matches everything. */
@@ -273,17 +283,23 @@ fun CategoryEdgeTab(
     }
 }
 
-/** Czech label for a stored `DetectedCategory` name. UNKNOWN and null deliberately draw nothing. */
+/**
+ * Label for a stored category. A value that is not a DetectedCategory is the user's own name
+ * and is shown verbatim; UNKNOWN and null deliberately draw nothing.
+ */
 @Composable
 private fun categoryLabel(category: String?): String? {
-    val parsed = category?.let { runCatching { DetectedCategory.valueOf(it) }.getOrNull() }
+    val value = category?.trim().orEmpty()
+    if (value.isEmpty()) return null
+    val parsed = runCatching { DetectedCategory.valueOf(value) }.getOrNull()
+        ?: return value
     val res = when (parsed) {
         DetectedCategory.EVENT -> R.string.category_event
         DetectedCategory.RECIPE -> R.string.category_recipe
         DetectedCategory.PURCHASE -> R.string.category_purchase
         DetectedCategory.ARTICLE -> R.string.category_article
         DetectedCategory.CONTACT -> R.string.category_contact
-        DetectedCategory.UNKNOWN, null -> return null
+        DetectedCategory.UNKNOWN -> return null
     }
     return stringResource(res)
 }

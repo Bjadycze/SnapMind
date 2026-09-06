@@ -8,7 +8,7 @@ import com.app.snapmind.data.local.entity.CapturedItemEntity
 
 @Database(
     entities = [CapturedItemEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

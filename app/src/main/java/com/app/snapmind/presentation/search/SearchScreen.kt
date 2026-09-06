@@ -57,6 +57,8 @@ fun SearchScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val showRetrospect by viewModel.showRetrospect.collectAsStateWithLifecycle()
     val items by viewModel.items.collectAsStateWithLifecycle()
+    val customCategories by viewModel.customCategories.collectAsStateWithLifecycle()
+    val retiredCategories by viewModel.retiredCategories.collectAsStateWithLifecycle()
 
     var openItemId by remember { mutableStateOf<Long?>(null) }
     val openIndex = items.indexOfFirst { it.id == openItemId }
@@ -75,7 +77,11 @@ fun SearchScreen(
                 viewModel.discard(id)
                 openItemId = null
             },
-            onRestore = { id -> viewModel.restore(id) }
+            onRestore = { id -> viewModel.restore(id) },
+            customCategories = customCategories,
+            retiredCategories = retiredCategories,
+            onPickCategory = { id, value -> viewModel.setCategory(id, value) },
+            onCreateCategory = { id, name -> viewModel.createCategory(id, name) }
         )
     }
 
@@ -148,7 +154,7 @@ fun SearchScreen(
             ) {
                 items(items, key = { it.id }) { item ->
                     // Named arguments: the card gained optional parameters after onOpen,
-                    // so a trailing lambda would now bind to the last one instead.
+                    // so a trailing lambda would bind to the last one instead.
                     CapturedItemCard(
                         item = item,
                         onOpen = { openItemId = item.id }

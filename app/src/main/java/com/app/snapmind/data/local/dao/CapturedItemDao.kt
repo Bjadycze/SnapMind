@@ -84,6 +84,13 @@ interface CapturedItemDao {
     suspend fun updateImageUri(id: Long, uri: String)
     @Query("UPDATE captured_items SET detectedCategory = :category, detectedDateMillis = :dateMillis WHERE id = :id")
     suspend fun updateClassification(id: Long, category: String?, dateMillis: Long?)
+
+    /**
+     * The manual choice, written on its own so the recognised date survives. Null clears it and
+     * the classifier's own guess shows through again (spec.md 11.16).
+     */
+    @Query("UPDATE captured_items SET userCategory = :category WHERE id = :id")
+    suspend fun updateUserCategory(id: Long, category: String?)
     /**
      * Matches `userNote` or `extractedText` -- the latter holds both OCR output and shared
      * URLs, so one query covers a screenshot's caption and a shared link's title alike. No

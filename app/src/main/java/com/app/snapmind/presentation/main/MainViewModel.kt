@@ -43,6 +43,13 @@ class MainViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
+    /** The user's own categories and the ones they removed (spec.md 11.16). */
+    val customCategories: StateFlow<List<String>> = settings.customCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val retiredCategories: StateFlow<List<String>> = settings.retiredCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val onboardingDone: StateFlow<Boolean?> = settings.onboardingDone
         .map { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -76,10 +83,24 @@ class MainViewModel @Inject constructor(
     }
 
     fun updateNote(itemId: Long, note: String) {
+        // Only the fajfka and the koš settle an item (spec.md 7.2, corrected in v1.1). Marking
+        // it done here made every noted item vanish from Aktivní the moment it was written --
+        // the same failure QuickCaptureReplyReceiver had.
+        viewModelScope.launch { repository.updateNote(itemId, note.trim()) }
+    }
+
+    /** Manual category from the detail dialog; null clears it back to the classifier's guess. */
+    fun setCategory(itemId: Long, value: String?) {
+        viewModelScope.launch { repository.updateUserCategory(itemId, value) }
+    }
+
+    /**
+     * Adds a category (or revives a retired one) and puts it on the item in one step -- you
+     * typed the name because you wanted it here, not to manage a list.
+     */
+    fun createCategory(itemId: Long, name: String) {
         viewModelScope.launch {
-            repository.updateNote(itemId, note.trim())
-            // Writing a note is acting on the item, so it stops asking to be reminded.
-            repository.markDone(itemId)
+            settings.addCustomCategory(name)?.let { repository.updateUserCategory(itemId, it) }
         }
     }
 

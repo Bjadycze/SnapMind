@@ -59,6 +59,9 @@ class CapturedItemRepositoryImpl @Inject constructor(
 
     override suspend fun updateClassification(id: Long, category: String?, dateMillis: Long?)= dao.updateClassification(id, category, dateMillis)
 
+    override suspend fun updateUserCategory(id: Long, category: String?) =
+        dao.updateUserCategory(id, category)
+
     override fun search(query: String, limit: Int): Flow<List<CapturedItem>> =
         dao.search(query, limit).map { list -> list.map { it.toDomain() } }
 }
