@@ -75,14 +75,23 @@ private val DividerWidth: Dp = 1.5.dp     // tloušťka čáry
 private const val SelectedTint = 0.55f  // výplň štítku, když je podle něj filtrováno
 
 /**
- * The value a tap filters by, or null when there is nothing to filter on -- an unclassified
- * item, or a stored value from a future version this build does not know. UNKNOWN is
- * deliberately not filterable: it is an empty slot, not a category.
+ * Filter key for everything the classifier could not place: a null category, UNKNOWN, or a
+ * value stored by a future version this build does not recognise. They are one group, because
+ * to the user they are one pile -- the items still waiting for a category.
+ *
+ * Not a real `DetectedCategory` value, so it can never collide with one.
  */
-fun categoryFilterKey(category: String?): String? {
+const val UnclassifiedFilterKey = "__unclassified__"
+
+/** The value a tap on this item's strip filters by. Never null: everything belongs somewhere. */
+fun categoryFilterKey(category: String?): String {
     val parsed = category?.let { runCatching { DetectedCategory.valueOf(it) }.getOrNull() }
-    return parsed?.takeIf { it != DetectedCategory.UNKNOWN }?.name
+    return parsed?.takeIf { it != DetectedCategory.UNKNOWN }?.name ?: UnclassifiedFilterKey
 }
+
+/** True when the item belongs in the currently filtered group. A null filter matches everything. */
+fun matchesCategoryFilter(category: String?, filter: String?): Boolean =
+    filter == null || categoryFilterKey(category) == filter
 
 /**
  * The category from Task 7, drawn as a vertical strip on the card's right edge, and the
@@ -145,7 +154,9 @@ fun CategoryEdgeTab(
     // file for why this rather than a palette role, and which knob to turn.
     val cardColor = if (settled) palette.settled else palette.surfaceRaisedHigh
     val restingStrip = when {
-        label == null -> cardColor            // UNKNOWN: an empty slot, marked only by its edge
+        // An empty slot stays empty -- unless it is the group being filtered, where it has to
+        // show itself, because the accent is the only way back out of the filter.
+        label == null && !selected -> cardColor
         // While the list is filtered by this category, its strips carry the accent -- that is
         // the only sign the filter is on, and it sits on the thing you tapped rather than
         // somewhere else on the screen. Not a badge and not a count (spec.md 7.3).

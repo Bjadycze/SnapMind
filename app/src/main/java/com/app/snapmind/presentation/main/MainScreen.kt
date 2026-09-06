@@ -36,6 +36,7 @@ import com.app.snapmind.R
 import androidx.compose.runtime.LaunchedEffect
 import com.app.snapmind.presentation.components.CapturedItemCard
 import com.app.snapmind.presentation.components.categoryFilterKey
+import com.app.snapmind.presentation.components.matchesCategoryFilter
 import com.app.snapmind.presentation.detail.ItemDetailDialog
 import com.app.snapmind.presentation.main.components.FilterTabs
 import com.app.snapmind.presentation.main.components.ItemFilter
@@ -106,14 +107,14 @@ fun MainScreen(
                 ItemFilter.ACTIVE -> state.active.filter { it.resolvedAt == null }
                 ItemFilter.DONE -> state.active.filter { it.resolvedAt != null }
                 ItemFilter.ALL -> state.active
-            }.filter { categoryFilter == null || it.detectedCategory == categoryFilter }
+            }.filter { matchesCategoryFilter(it.detectedCategory, categoryFilter) }
         }
         val filteredArchived = remember(state.archived, selectedFilter, categoryFilter) {
             when (selectedFilter) {
                 ItemFilter.ACTIVE -> state.archived.filter { it.resolvedAt == null }
                 ItemFilter.DONE -> state.archived.filter { it.resolvedAt != null }
                 ItemFilter.ALL -> state.archived
-            }.filter { categoryFilter == null || it.detectedCategory == categoryFilter }
+            }.filter { matchesCategoryFilter(it.detectedCategory, categoryFilter) }
         }
 
         // The trap this closes: filter by one category, settle the last item in it, and the list
@@ -195,11 +196,12 @@ fun MainScreen(
                         // Tap the strip to filter by that category, tap the same one again to
                         // clear. An unclassified item has nothing to filter by, so its strip
                         // stays inert.
-                        onFilterCategory = categoryFilterKey(item.detectedCategory)?.let { key ->
-                            { categoryFilter = if (categoryFilter == key) null else key }
+                        onFilterCategory = {
+                            val key = categoryFilterKey(item.detectedCategory)
+                            categoryFilter = if (categoryFilter == key) null else key
                         },
                         categorySelected = categoryFilter != null &&
-                            item.detectedCategory == categoryFilter
+                            matchesCategoryFilter(item.detectedCategory, categoryFilter)
                     )
                 }
 
@@ -225,11 +227,12 @@ fun MainScreen(
                         // Tap the strip to filter by that category, tap the same one again to
                         // clear. An unclassified item has nothing to filter by, so its strip
                         // stays inert.
-                        onFilterCategory = categoryFilterKey(item.detectedCategory)?.let { key ->
-                            { categoryFilter = if (categoryFilter == key) null else key }
+                        onFilterCategory = {
+                            val key = categoryFilterKey(item.detectedCategory)
+                            categoryFilter = if (categoryFilter == key) null else key
                         },
                         categorySelected = categoryFilter != null &&
-                            item.detectedCategory == categoryFilter
+                            matchesCategoryFilter(item.detectedCategory, categoryFilter)
                     )
                     }
                 }
