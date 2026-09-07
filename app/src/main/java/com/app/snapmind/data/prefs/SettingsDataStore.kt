@@ -35,6 +35,10 @@ class SettingsDataStore @Inject constructor(
 
         // Two lists, newline-separated. A Set would lose the order the user added them in,
         // and order is the only sensible way to show them (spec.md 11.16).
+        // Last answer Play gave. Read while Play is unreachable, so a paid user is never
+        // locked out by a bad connection (spec.md Task 8).
+        val PRO_ENTITLED = booleanPreferencesKey("pro_entitled")
+
         val CUSTOM_CATEGORIES = stringPreferencesKey("custom_categories")
         val RETIRED_CATEGORIES = stringPreferencesKey("retired_categories")
     }
@@ -56,6 +60,8 @@ class SettingsDataStore @Inject constructor(
     }
 
     /** Custom categories currently offered when picking one. */
+    val proEntitled: Flow<Boolean> = read(Keys.PRO_ENTITLED, false)
+
     val customCategories: Flow<List<String>> = readList(Keys.CUSTOM_CATEGORIES)
 
     /**
@@ -113,6 +119,7 @@ class SettingsDataStore @Inject constructor(
         write(Keys.QUIET_END_HOUR, end.coerceIn(0, 23))
     }
     suspend fun setOnboardingDone(done: Boolean) = write(Keys.ONBOARDING_DONE, done)
+    suspend fun setProEntitled(entitled: Boolean) = write(Keys.PRO_ENTITLED, entitled)
     suspend fun setPalette(choice: PaletteChoice) = write(Keys.PALETTE, choice.name)
     suspend fun setThemeMode(mode: ThemeMode) = write(Keys.THEME_MODE, mode.name)
 

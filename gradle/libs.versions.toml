@@ -18,6 +18,7 @@ datastore = "1.1.1"
 coroutines = "1.9.0"
 junit = "4.13.2"
 androidxTestJunit = "1.2.1"
+billing = "7.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +53,7 @@ work-testing = { group = "androidx.work", name = "work-testing", version.ref = "
 
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitText" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+billing = { group = "com.android.billingclient", name = "billing", version.ref = "billing" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }

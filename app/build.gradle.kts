@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.datastore.preferences)
+    implementation(libs.billing)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

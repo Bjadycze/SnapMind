@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import javax.inject.Inject
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
@@ -20,6 +21,7 @@ import com.app.snapmind.presentation.onboarding.OnboardingScreen
 import com.app.snapmind.presentation.search.SearchScreen
 import com.app.snapmind.presentation.settings.SettingsScreen
 import com.app.snapmind.presentation.theme.SnapMindTheme
+import com.app.snapmind.data.billing.BillingManager
 import com.app.snapmind.presentation.settings.SettingsViewModel
 import com.app.snapmind.service.foreground.ScreenshotObserverService
 import dagger.hilt.android.AndroidEntryPoint
@@ -27,6 +29,8 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var billing: BillingManager
 
     private val viewModel: MainViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
@@ -88,6 +92,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Task 3 field finding: a reinstall silently revoked everything. Re-check every time.
         viewModel.refreshPermissions()
+        // Same reasoning for the subscription: it can be cancelled, refunded or restored on
+        // another device while the app is in the background (spec.md Task 8).
+        billing.refresh()
         startObserverIfPossible()
     }
 

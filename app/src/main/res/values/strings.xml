@@ -117,5 +117,9 @@
     <string name="settings_quiet_start_title">Quiet from</string>
     <string name="settings_quiet_body">No reminders during these hours.</string>
     <string name="settings_quiet_end_title">Quiet until</string>
+    <string name="settings_pro_title">SnapMind Pro</string>
+    <string name="settings_pro_body">Zachytávání, připomínky i hledání zůstávají zdarma navždy. Pro platí za to, co stojí peníze za každé použití — chytré názvy a shrnutí v cloudu.</string>
+    <string name="settings_pro_active">Aktivní. Děkuju.</string>
+    <string name="settings_pro_subscribe">Předplatit</string>
     <string name="settings_back">Back</string>
 </resources>

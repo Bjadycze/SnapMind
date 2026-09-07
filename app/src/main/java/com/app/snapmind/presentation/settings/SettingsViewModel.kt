@@ -2,7 +2,10 @@ package com.app.snapmind.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.app.Activity
+import com.app.snapmind.data.billing.BillingManager
 import com.app.snapmind.data.prefs.SettingsDataStore
+import com.app.snapmind.domain.billing.EntitlementProvider
 import com.app.snapmind.domain.repository.CapturedItemRepository
 import com.app.snapmind.presentation.theme.PaletteChoice
 import com.app.snapmind.presentation.theme.ThemeMode
@@ -31,8 +34,20 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val settings: SettingsDataStore,
     private val repository: CapturedItemRepository,
-    private val scheduler: ReminderScheduler
+    private val scheduler: ReminderScheduler,
+    private val billing: BillingManager,
+    entitlement: EntitlementProvider
 ) : ViewModel() {
+
+    /**
+     * Whether SnapMind Pro is active. Nothing is gated by it yet (Task 8 ships the billing
+     * path on its own, before anything depends on it) -- this is where it becomes visible.
+     */
+    val isPro: StateFlow<Boolean> = entitlement.isPro()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Play draws its sheet on top of the calling Activity, so an app context will not do. */
+    fun purchase(activity: Activity) = billing.launchPurchase(activity)
 
     /**
      * The user's own categories, each with whether an unresolved item still uses it

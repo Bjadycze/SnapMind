@@ -27,6 +27,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,6 +56,8 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     BackHandler(onBack = onBack)
 
@@ -109,6 +115,11 @@ fun SettingsScreen(
             onChange = { viewModel.setQuietHours(state.quietStartHour, it) }
         )
 
+        ProSetting(
+            isPro = isPro,
+            onSubscribe = { context.findActivity()?.let(viewModel::purchase) }
+        )
+
         // Only shown once the user has made one: an empty section would be a setting for
         // something that does not exist yet.
         if (categories.isNotEmpty()) {
@@ -118,6 +129,40 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+/**
+ * SnapMind Pro (spec.md 11.2, Task 8). Capture, reminders and search are free permanently, so
+ * this section states what Pro is for and never nags: no banner, no badge, no reminder that
+ * you have not bought it.
+ */
+@Composable
+private fun ProSetting(isPro: Boolean, onSubscribe: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.settings_pro_title),
+            style = MaterialTheme.typography.titleSmall
+        )
+        Text(
+            text = stringResource(
+                if (isPro) R.string.settings_pro_active else R.string.settings_pro_body
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalSnapMindPalette.current.onSurfaceFaded
+        )
+        if (!isPro) {
+            OutlinedButton(onClick = onSubscribe) {
+                Text(stringResource(R.string.settings_pro_subscribe))
+            }
+        }
+    }
+}
+
+/** Compose gives a ContextWrapper here, not the Activity Play needs. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /**
