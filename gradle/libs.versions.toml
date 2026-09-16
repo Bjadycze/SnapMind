@@ -1,11 +1,21 @@
 [versions]
 # Verified against the Task 0 spike build: AGP 8.7.3 / Kotlin 2.0.21 / Gradle 8.9 / JDK 21.
-agp = "8.7.3"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.28"
-hilt = "2.52"
+# Target API 36 migration: AGP 8.9.3 requires Gradle >= 8.11.1, which is above Kotlin 2.0.21's
+# documented range (max Gradle 8.10) -- Kotlin bumped to 2.1.20 (range 7.6.3-8.12.1) to cover it.
+agp = "8.9.3"
+kotlin = "2.1.20"
+ksp = "2.1.20-1.0.32"
+# 2.52 failed hiltJavaCompileDebug against Kotlin 2.1.20 metadata ("unsupported metadata
+# version"); 2.60.1 synced past that but requires AGP 9 (Hilt release notes: AGP 9 became
+# mandatory for the Hilt Gradle plugin starting at 2.59, github.com/google/dagger releases).
+# 2.58 is the newest version below that line: its own release notes say AGP 9 support was
+# deliberately held back from 2.58 "because it forces users onto AGP 9", and its published POM
+# (dagger-compiler-2.58.pom) declares org.jetbrains.kotlin:kotlin-metadata-jvm 2.2.20 as a real
+# dependency -- newer than the 2.1.10 shaded into 2.56.2 -- so it reads Kotlin 2.1.20 metadata.
+hilt = "2.58"
 hiltNavigation = "1.2.0"
-room = "2.6.1"
+# Room 2.6.1 crashes under KSP2 ("unexpected jvm signature V"). KSP2 support landed in 2.7.
+room = "2.7.2"
 workManager = "2.9.1"
 hiltWork = "1.2.0"
 mlkitText = "16.0.1"

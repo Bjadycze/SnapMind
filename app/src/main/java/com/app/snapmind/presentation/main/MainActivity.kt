@@ -1,5 +1,6 @@
 package com.app.snapmind.presentation.main
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -10,13 +11,19 @@ import androidx.activity.viewModels
 import javax.inject.Inject
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.app.snapmind.data.prefs.AppLanguagePrefs
+import com.app.snapmind.presentation.locale.withAppLocale
+import com.app.snapmind.presentation.locale.withLiveAppLocale
 import com.app.snapmind.presentation.onboarding.OnboardingScreen
 import com.app.snapmind.presentation.search.SearchScreen
 import com.app.snapmind.presentation.settings.SettingsScreen
@@ -35,6 +42,12 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
 
+    // Runs before anything may await a coroutine, so the choice comes from the synchronous
+    // SharedPreferences mirror (data/prefs/AppLanguagePrefs.kt), never from DataStore.
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withAppLocale(AppLanguagePrefs.get(newBase)))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15 enforces edge-to-edge for apps targeting API 35.
         enableEdgeToEdge()
@@ -48,40 +61,52 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsState by settingsViewModel.state.collectAsStateWithLifecycle()
 
-            SnapMindTheme(palette = settingsState.palette, mode = settingsState.themeMode) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
-                    var showOnboarding by remember { mutableStateOf(false) }
-                    var showSettings by remember { mutableStateOf(false) }
-                    var showSearch by remember { mutableStateOf(false) }
+            // withLiveAppLocale wraps this Activity rather than detaching from it, so code
+            // further down the tree that needs the real Activity (billing's findActivity(),
+            // startActivity(), permission launchers) keeps working -- see AppLocale.kt.
+            val localizedContext = remember(settingsState.appLanguage) {
+                withLiveAppLocale(settingsState.appLanguage)
+            }
 
-                    when {
-                        // null means DataStore has not answered yet: render nothing rather
-                        // than flashing onboarding at a returning user.
-                        onboardingDone == null -> Unit
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides localizedContext.resources.configuration
+            ) {
+                SnapMindTheme(palette = settingsState.palette, mode = settingsState.themeMode) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
+                        var showOnboarding by remember { mutableStateOf(false) }
+                        var showSettings by remember { mutableStateOf(false) }
+                        var showSearch by remember { mutableStateOf(false) }
 
-                        onboardingDone == false || showOnboarding -> OnboardingScreen(
-                            onDone = {
-                                showOnboarding = false
-                                startObserverIfPossible()
-                            }
-                        )
+                        when {
+                            // null means DataStore has not answered yet: render nothing rather
+                            // than flashing onboarding at a returning user.
+                            onboardingDone == null -> Unit
 
-                        showSettings -> SettingsScreen(
-                            onBack = { showSettings = false }
-                        )
+                            onboardingDone == false || showOnboarding -> OnboardingScreen(
+                                onDone = {
+                                    showOnboarding = false
+                                    startObserverIfPossible()
+                                }
+                            )
 
-                        // Reached only by the search icon (spec.md 11.10/7.3): never opened by
-                        // this app on its own, never by a notification.
-                        showSearch -> SearchScreen(
-                            onBack = { showSearch = false }
-                        )
+                            showSettings -> SettingsScreen(
+                                onBack = { showSettings = false }
+                            )
 
-                        else -> MainScreen(
-                            onFixPermissions = { showOnboarding = true },
-                            onOpenSettings = { showSettings = true },
-                            onOpenSearch = { showSearch = true }
-                        )
+                            // Reached only by the search icon (spec.md 11.10/7.3): never opened
+                            // by this app on its own, never by a notification.
+                            showSearch -> SearchScreen(
+                                onBack = { showSearch = false }
+                            )
+
+                            else -> MainScreen(
+                                onFixPermissions = { showOnboarding = true },
+                                onOpenSettings = { showSettings = true },
+                                onOpenSearch = { showSearch = true }
+                            )
+                        }
                     }
                 }
             }

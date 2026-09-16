@@ -166,7 +166,11 @@ fun CapturedItemCard(
                                     .background(platform.accent)
                             )
                             Text(
-                                text = platform.label,
+                                text = if (platform == LinkPlatform.OTHER) {
+                                    stringResource(R.string.link_platform_other)
+                                } else {
+                                    platform.label
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = platform.accent
                             )

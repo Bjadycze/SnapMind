@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.app.snapmind.domain.model.AppLanguage
 import com.app.snapmind.domain.model.ReminderPolicy
 import com.app.snapmind.presentation.theme.PaletteChoice
 import com.app.snapmind.presentation.theme.ThemeMode
@@ -32,6 +33,7 @@ class SettingsDataStore @Inject constructor(
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val PALETTE = stringPreferencesKey("palette")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
 
         // Two lists, newline-separated. A Set would lose the order the user added them in,
         // and order is the only sensible way to show them (spec.md 11.16).
@@ -57,6 +59,10 @@ class SettingsDataStore @Inject constructor(
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
         runCatching { enumValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: "") }
             .getOrDefault(ThemeMode.DARK)
+    }
+    val appLanguage: Flow<AppLanguage> = context.dataStore.data.map { prefs ->
+        runCatching { enumValueOf<AppLanguage>(prefs[Keys.APP_LANGUAGE] ?: "") }
+            .getOrDefault(AppLanguage.SYSTEM)
     }
 
     /** Custom categories currently offered when picking one. */
@@ -122,6 +128,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setProEntitled(entitled: Boolean) = write(Keys.PRO_ENTITLED, entitled)
     suspend fun setPalette(choice: PaletteChoice) = write(Keys.PALETTE, choice.name)
     suspend fun setThemeMode(mode: ThemeMode) = write(Keys.THEME_MODE, mode.name)
+
+    /**
+     * Mirrors into SharedPreferences before touching DataStore: viewModelScope runs this body
+     * synchronously up to the first real suspension point, so the mirror is guaranteed written
+     * before a caller that follows with activity.recreate() rebuilds the Activity.
+     */
+    suspend fun setAppLanguage(language: AppLanguage) {
+        AppLanguagePrefs.set(context, language)
+        write(Keys.APP_LANGUAGE, language.name)
+    }
 
     private fun readList(key: Preferences.Key<String>): Flow<List<String>> =
         context.dataStore.data.map { parseList(it[key]) }

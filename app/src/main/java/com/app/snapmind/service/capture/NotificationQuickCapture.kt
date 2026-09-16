@@ -13,8 +13,10 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
+import com.app.snapmind.data.prefs.AppLanguagePrefs
 import com.app.snapmind.domain.model.CaptureSource
 import com.app.snapmind.domain.service.QuickCapturePresenter
+import com.app.snapmind.presentation.locale.withAppLocale
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,6 +37,10 @@ class NotificationQuickCapture @Inject constructor(
     @ApplicationContext private val context: Context
 ) : QuickCapturePresenter {
 
+    /** Runs from a Service with no Activity to read from, so the prefs mirror is the source. */
+    private val localizedContext: Context
+        get() = context.withAppLocale(AppLanguagePrefs.get(context))
+
     override suspend fun present(itemId: Long, imageUri: String?, source: CaptureSource) {
         ensureChannel()
 
@@ -50,7 +56,7 @@ class NotificationQuickCapture @Inject constructor(
 
         val replyAction = NotificationCompat.Action.Builder(
             android.R.drawable.ic_menu_edit,
-            context.getString(com.app.snapmind.R.string.capture_action_note),
+            localizedContext.getString(com.app.snapmind.R.string.capture_action_note),
             replyPending
         )
             .addRemoteInput(RemoteInput.Builder(KEY_REPLY).build())
@@ -70,14 +76,14 @@ class NotificationQuickCapture @Inject constructor(
 
         val discardAction = NotificationCompat.Action.Builder(
             android.R.drawable.ic_menu_close_clear_cancel,
-            context.getString(com.app.snapmind.R.string.capture_action_discard),
+            localizedContext.getString(com.app.snapmind.R.string.capture_action_discard),
             discardPending
         ).build()
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentTitle(context.getString(com.app.snapmind.R.string.capture_title))
-            .setContentText(context.getString(com.app.snapmind.R.string.capture_body))
+            .setContentTitle(localizedContext.getString(com.app.snapmind.R.string.capture_title))
+            .setContentText(localizedContext.getString(com.app.snapmind.R.string.capture_body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(Notification.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -115,10 +121,10 @@ class NotificationQuickCapture @Inject constructor(
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            context.getString(com.app.snapmind.R.string.channel_capture_name),
+            localizedContext.getString(com.app.snapmind.R.string.channel_capture_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = context.getString(com.app.snapmind.R.string.channel_capture_desc)
+            description = localizedContext.getString(com.app.snapmind.R.string.channel_capture_desc)
             // No badges anywhere in this app -- spec.md 7.3.
             setShowBadge(false)
         }

@@ -2,6 +2,7 @@ package com.app.snapmind.presentation.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import com.app.snapmind.R
 
 /**
  * Barevné palety. Zdroj pravdy pro VŠECHNY barvy v appce — v UI kódu nesmí zůstat
@@ -28,13 +29,13 @@ data class SnapMindPalette(
     val outline: Color,
 )
 
-enum class PaletteChoice(val labelCs: String) {
-    VIOLET("Fialová"),
-    TERRACOTTA("Terakota"),
-    DUSTYROSE("Pudrová růžová"),
-    SAGE("Šalvějová"),
-    COMFORTBEIGE("Béžová"),
-    POWDERBLUE("Pudrová modrá");
+enum class PaletteChoice(val labelRes: Int) {
+    VIOLET(R.string.settings_palette_violet),
+    TERRACOTTA(R.string.settings_palette_terracotta),
+    DUSTYROSE(R.string.settings_palette_dustyrose),
+    SAGE(R.string.settings_palette_sage),
+    COMFORTBEIGE(R.string.settings_palette_comfortbeige),
+    POWDERBLUE(R.string.settings_palette_powderblue);
 
     companion object { val DEFAULT = VIOLET }
 }

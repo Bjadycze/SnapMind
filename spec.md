@@ -992,6 +992,168 @@ Co zbývá: kategorie zatím nikde není vidět, jen leží v databázi. Zobraze
 odložené — jakmile se ukáže, je to informace na každém řádku a musí projít testem §7.3
 (nesmí z toho být počítadlo ani odznak).
 
+### 11.15 Štítek kategorie a swipe „Hotovo?" (v1.1, shipped)
+
+Kategorie z Task 7 se kreslí jako svislý pruh na pravém okraji karty
+(`presentation/components/CategoryEdgeTab.kt`, `CategoryTabWidth = 30.dp`, kartu obaluje
+`BoxWithConstraints` a pruh leží přes ni v `matchParentSize` Boxu). Tah pruhu doleva položku
+vyřídí, klepnutí je rezervované pro filtr podle kategorie.
+
+Proč pruh a ne odznak v řádku metadat: nesoupeří s poznámkou, roste s výškou karty a nenese
+žádnou vlastní barvu. Nic nepočítá (§7.3) — říká, **co** položka je, nikdy kolik jich je.
+
+Rozhodnutí, která stojí za uchování:
+
+- **Gesto je samo odměnou.** Barva, slovo i vibrace se dějí, dokud je prst dole. Po puštění
+  nenásleduje žádná animace, a ani následovat nemůže: ve filtru Aktivní karta ze seznamu zmizí
+  v okamžiku vyřízení, takže by animace hrála na composable, který se právě ruší — přesně ta
+  chyba, kterou §11.8 zapsala u `SettleButton`.
+- **Práh je 50 % šířky karty, ne 70 %.** Přes polovinu se palcem jedné ruky nedostaneš bez
+  přehmátnutí, a gesto, které chce druhou ruku, je pomalejší než otevřít detail a klepnout na
+  fajfku. Rychlý švih (přes 1000 dp/s) potvrdí už na 30 %.
+- **Otazník je ukazatel prahu.** Pod prahem „Hotovo?", nad prahem „Hotovo" plným jasem. Práh
+  tak nepotřebuje ani čáru, ani ukazatel postupu — obojí by bylo počítadlo.
+- **Puštění pod prahem je tiché** a vrací se pružinou. Nevyřízení není chyba, takže nesmí
+  vibrovat — stejná logika jako u koše (§11.8).
+- **Jedno slabé cvaknutí na prahu nebylo na zařízení cítit.** Práh proto vibruje dvěma
+  krátkými pulzy na plné amplitudě, potvrzení jedním delším (40 ms). Rozlišuje je rytmus, ne
+  síla — §11.8 už to má napsané a tady se to potvrdilo podruhé.
+- **Barva pruhu není palette role.** `surfaceRaisedHigh` **je** barva karty, ve světlých
+  paletách je `surfaceRaised` skoro bílá a `panel` splynul také. Pruh proto bere barvu karty
+  posunutou k `outline`: `lerp(cardColor, palette.outline, TabTint)`, odladěno na
+  **`TabTint = 0.45f`**, plus samostatná dělicí čára `outline` o šířce **1.5 dp**. Žádná nová
+  hodnota mimo `Palette.kt` (§11.13) a přežije to výměnu palety.
+- **UNKNOWN je prázdné místo, ne slovo „neurčeno".** Výplň má barvu karty, hranici drží
+  čárkovaná čára. Do budoucna je to místo pro ručně zapsanou kategorii.
+- **Rotace sama nemění naměřenou velikost.** Svislý text potřebuje `Modifier.layout`
+  s prohozenými constraints a teprve pak `rotationZ = 90f`; bez toho by se karta roztáhla
+  do šířky.
+
+Dvě pasti, které to stály build:
+
+- **Balík je `com.app.snapmind.domain.classify`, i když složka na disku je `classify/`.**
+  Import podle cesty ve stromu projektu je omyl.
+- **Nepovinné parametry za `onOpen` rozbily volání s koncovou lambdou.** `CapturedItemCard(item)
+  { … }` v `SearchScreen` se po přidání `onSettle` a `onFilterCategory` navázalo na poslední
+  parametr místo na `onOpen`. Každé volání karty proto používá pojmenované argumenty.
+
+Filtr klepnutím (shipped, stav ve `MainScreen`, ne v ViewModelu — stejně jako záložky §11.4):
+
+- Klepnutí zapne filtr kategorie, druhé klepnutí na stejnou ho zruší.
+- **Zapnutý filtr pozná jen podle štítků samotných** — ty jeho kategorie nesou akcent
+  (`SelectedTint`). Značka sedí na tom, na co uživatel klepl, ne jinde na obrazovce, a nic
+  nepočítá (§7.3).
+- **Přepnutí záložky Aktivní/Vyřízené/Vše ruší i filtr kategorie.** Dva filtry naskládané přes
+  sebe by daly krátký seznam bez viditelného důvodu.
+- **Prázdný výsledek filtr sám zruší** (`LaunchedEffect` nad oběma seznamy). Bez toho vzniká
+  past: vyfiltruješ kategorii, poslední položku v ní vyřídíš, seznam je prázdný a nezbude
+  štítek, kterým filtr vypnout. Pravidlo o záložkách by to zachránilo, ale musel bys ho znát.
+- **Neurčené položky jsou jedna filtrovatelná skupina** pod klíčem
+  `UnclassifiedFilterKey = "__unclassified__"` — prázdná kategorie, `UNKNOWN` i hodnota
+  uložená budoucí verzí, kterou build nezná. Pro uživatele je to jedna hromádka: to, co ještě
+  čeká na zařazení, a přesně tu bude hledat, až se budou kategorie doplňovat ručně. Klíč není
+  hodnota `DetectedCategory`, takže nemůže kolidovat se skutečnou kategorií.
+- **Prázdný štítek dostane akcent, jen když je zapnutý filtr neurčených.** Jinak zůstává
+  prázdný — ale bez té výjimky by z filtru nevedla cesta ven, protože by nebylo na co klepnout.
+- **Dotyková plocha zůstala na šířce štítku, ne na 48 dp.** Rozšíření doleva by přesáhlo přes
+  text poznámky a bralo by klepnutí, která mají otevřít detail. Na výšku má štítek celou kartu,
+  takže cíl je i tak dost velký.
+
+### 11.16 Ruční a vlastní kategorie (v1.1, shipped)
+
+Klasifikátor hádá; tohle je místo, kde se odhad opraví a kde se zařadí to, co neuměl zařadit.
+Řádek štítků v detailu položky (`presentation/components/CategoryPicker.kt`): pět vestavěných
+kategorií, vlastní kategorie uživatele, „neurčeno" a „+ vlastní" s polem na název. Seznam
+vlastních jmen žije v `SettingsDataStore`, mazání je v Nastavení.
+
+- **Nový sloupec `userCategory`, migrace na verzi 4.** `detectedCategory` zůstává záznamem toho,
+  co odhadl klasifikátor. Kdyby ho ruční volba přepsala, ztratil by se rozdíl mezi „stroj
+  netrefil" a „stroj netipoval". Všude se čte `CapturedItem.effectiveCategory`
+  (`userCategory ?: detectedCategory`) — jedno místo, kde se to řeší.
+- **Ruční volbu klasifikátor nepřepíše a nepotřebuje k tomu příznak.** `OcrWorker` bere jen
+  položky s `isProcessed = false`, takže se ke kategorii po rozpoznání textu už nikdy nevrátí.
+- **Zápis jde přes `updateUserCategory`, ne `updateClassification`.** To druhé píše oba sloupce
+  najednou a smazalo by rozpoznané datum.
+- **Vlastní jméno je uložené jako text a je samo filtrovacím klíčem.** Hodnota, která není
+  `DetectedCategory`, se na štítku zobrazí doslova a ve filtru se chová jako každá jiná
+  kategorie (§11.15).
+- **Smazání nic nezahazuje.** Název se přesune do seznamu „dřív používané" a nabídne se zpět
+  při dalším přidávání — nemusí se přepisovat ručně a nevzniknou dvě skoro stejná jména.
+  Porovnává se bez ohledu na velikost písmen, prázdný název se ignoruje.
+- **Smazat lze jen kategorii, kterou nedrží žádná nevyřízená položka.** Křížek je jinak
+  neaktivní a pod názvem je řádek proč. Vyřízené a archivované položky si název ponechají a
+  zobrazují ho dál: mizí ze seznamu k nabízení, ne z historie (§7.2).
+- **Přejmenování se nedělá.** Přidá se nový název a starý se smaže, jakmile ho nic aktivního
+  nedrží — hromadný update řádků a další obrazovka v Nastavení za to nestojí.
+- Sekce v Nastavení se objeví, teprve když existuje aspoň jedna vlastní kategorie. Nikde žádné
+  počty (§7.3).
+
+Nález mimo zadání: **`markDone` při zápisu poznámky žilo ještě na dvou dalších místech** —
+`MainViewModel.updateNote` a `SearchViewModel.updateNote`. Editace poznámky v detailu tedy
+položku rovnou vyřídila, stejně jako dřív odpověď na notifikaci (§11.8). Opraveno; §7.2 platí
+na všech třech cestách.
+
+**Sdílené odkazy se klasifikují v `EnrichSharedLinkUseCase`, ne v `OcrWorker`** (doplněno
+hned po předchozím). Obohacení volá `updateOcrResult`, které nastaví `isProcessed = 1`, a
+worker se dívá jen na nezpracované řádky — odkaz by tedy kategorii nedostal nikdy. Klasifikuje
+se titulek, poznámka a URL dohromady, takže odkaz na recept skončí jako recept, ne jako obecný
+článek. Zapisuje se jen `detectedCategory`; ruční volba v `userCategory` má přednost, takže
+opakované sdílení téhož odkazu ji nepřepíše.
+
+### 11.17 Play Billing (Task 8, kód shipped, UI skryté pro první vydání)
+
+`data/billing/BillingManager.kt` obaluje Play Billing 7.1.1, `PlayEntitlementProvider` z něj dělá
+jeden boolean a `di/BillingModule` ho váže místo `AlwaysProEntitlementProvider` (ta zůstává
+v kódu nenavázaná — dá se dočasně přepnout zpět při vývoji placené funkce bez Play Console).
+Zatím nic negatuje: Task 8 záměrně ověřuje platební cestu dřív, než na ní cokoli závisí.
+
+- **Selhává otevřeně.** `BillingManager.entitled` je `null`, dokud Play neodpoví, a `null`
+  nikdy neznamená „nemá zaplaceno". Do té doby platí poslední známý stav uložený
+  v `SettingsDataStore` (`pro_entitled`). Kdo zaplatil, nesmí přijít o přístup ve vlaku.
+- **Předplatné, ale kód přijme i jednorázový nákup.** Dotazuje se na `SUBS` i `INAPP` a za Pro
+  považuje cokoli vlastněného, takže „lifetime" varianta je později otázka Play Console, ne kódu.
+  Předplatné je zvolené proto, že Tier 3 stojí peníze za každé volání — opakovaný náklad si
+  žádá opakovaný příjem.
+- **Nepotvrzený nákup Play po třech dnech automaticky vrátí.** `acknowledgePurchase` se volá
+  hned, jakmile se objeví nepotvrzený `PURCHASED`. Tohle je jediné místo v celé platební cestě,
+  které tiše vezme peníze zpět, když se vynechá.
+- **`USER_CANCELED` a ostatní chybové kódy stav nemění.** Zavřený platební dialog není důkaz,
+  že předplatné zaniklo.
+- **Stav se obnovuje v `MainActivity.onResume`**, stejně jako oprávnění: předplatné může skončit,
+  být vráceno nebo obnoveno na jiném zařízení, zatímco appka běží na pozadí.
+- **`PRO_PRODUCT_ID = "snapmind_pro"`** musí přesně sedět s ID produktu v Play Console.
+
+### 11.17.1 Billing UI je v prvním vydání skryté (oprava z 14. 9. 2026)
+
+Původní znění téhle sekce říkalo, že *sekce v Nastavení stav ukazuje a nabízí Předplatit*. To
+přestalo platit před prvním vydáním v Play a tenhle odstavec je autoritativní.
+
+Produkt `snapmind_pro` v Play Console neexistuje, takže tlačítko Předplatit by nic nekoupilo —
+rozbité tlačítko ve veřejné verzi, které Play review může zachytit. Sekce se proto **neodstraňuje,
+jen skrývá**:
+
+- `BuildConfig.BILLING_UI_ENABLED` — **`false` v debug i v release.** Obě varianty čtou gradle
+  property `snapmind.billingUi` s defaultem `false`; build s viditelným billingem se postaví
+  lokálně přes `-Psnapmind.billingUi=true`. Property (místo natvrdo zadaného `false`) je tam
+  proto, aby placená cesta šla odladit ve stejné variantě, v jaké poběží u uživatele — jinak
+  by ji release prostředí vidělo poprvé až v den zapnutí, současně s R8 a ostrým Play Billingem.
+- `BillingManager`, `PlayEntitlementProvider`, `EntitlementProvider` i `di/BillingModule`
+  zůstávají navázané a běží dál. Mění se výhradně viditelnost UI; zapnutí je změna flagu.
+- Na místě předplatného je v Nastavení sekce **O aplikaci** se dvěma řádky: **adresa GitHub
+  repozitáře** (klikací, `ACTION_VIEW`) a **verze** z `BuildConfig.VERSION_NAME`. Adresa je
+  sama sobě popiskem — žádný nadpis „Zdrojový kód" nad ní. Žádná zmínka o podpoře, příspěvku
+  ani sponzorství.
+- **Odkaz na GitHub nesmí nikdy stát pod nadpisem o platbě nebo podpoře.** Jakmile na GitHubu
+  vznikne Sponsors nebo jiná cesta k penězům, odkaz z aplikace musí pryč — odkaz vedoucí
+  k platbě mimo Play porušuje Google Play Payments policy.
+
+Billing UI se zapne až po rozhodnutí **31. 3. 2027** (práh instalací v `aplikace-dalsi-kroky.md`).
+Do té doby je Task 8 hotový v kódu a nedokončený v Play Console.
+
+**Co zbývá k ověření** v Play Console: vytvořit předplatné s ID `snapmind_pro` a základní plán,
+přidat licenční testery. Teprve pak dává smysl definition of done z Task 8 — koupit, zrušit,
+obnovit, a ověřit, že režim letadlo přístup nevezme.
+
 ## 12. Open questions for the next hardware pass
 
 1. Samsung screenshot path — expected `DCIM/Screenshots`, not yet confirmed on a real device.

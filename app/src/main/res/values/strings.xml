@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">SnapMind</string>
+    <string name="app_name" translatable="false">SnapMind</string>
 
     <!-- Notification channels -->
     <string name="channel_capture_name">Quick capture</string>
@@ -58,25 +58,34 @@
     <string name="item_settled">%1$s · done</string>
     <string name="main_settings">Settings</string>
 
-    <!-- Category strip on the card (spec.md 11.14). UNKNOWN deliberately has no label. -->
-    <string name="category_event">událost</string>
-    <string name="category_recipe">recept</string>
-    <string name="category_purchase">nákup</string>
-    <string name="category_article">článek</string>
-    <string name="category_contact">kontakt</string>
-    <string name="card_settle_question">Hotovo?</string>
-    <string name="card_settle_confirm">Hotovo</string>
+    <!-- Filter tabs (Active/Done/All) -->
+    <string name="filter_active">Active</string>
+    <string name="filter_done">Done</string>
+    <string name="filter_all">All</string>
 
-    <!-- Ruční kategorie (spec.md 11.16) -->
-    <string name="detail_category_label">Kategorie</string>
-    <string name="category_none">neurčeno</string>
-    <string name="category_add">+ vlastní</string>
-    <string name="category_add_hint">Název, třeba Zahrada</string>
-    <string name="category_add_confirm">Přidat</string>
-    <string name="category_previously_used">Dřív používané:</string>
-    <string name="settings_categories_title">Vlastní kategorie</string>
-    <string name="settings_category_in_use">používá ji položka v Aktivní</string>
-    <string name="settings_category_remove">Odebrat</string>
+    <!-- Category strip on the card (spec.md 11.14). UNKNOWN deliberately has no label. -->
+    <string name="category_event">event</string>
+    <string name="category_recipe">recipe</string>
+    <string name="category_purchase">purchase</string>
+    <string name="category_article">article</string>
+    <string name="category_contact">contact</string>
+    <string name="card_settle_question">Done?</string>
+    <string name="card_settle_confirm">Done</string>
+
+    <!-- Shared link badge (LinkPlatform). Brand names (YouTube, Instagram, ...) stay
+         untranslated - only the generic fallback needs a string. -->
+    <string name="link_platform_other">Link</string>
+
+    <!-- Manual categories (spec.md 11.16) -->
+    <string name="detail_category_label">Category</string>
+    <string name="category_none">unsorted</string>
+    <string name="category_add">+ custom</string>
+    <string name="category_add_hint">A name, say Garden</string>
+    <string name="category_add_confirm">Add</string>
+    <string name="category_previously_used">Used before:</string>
+    <string name="settings_categories_title">Your categories</string>
+    <string name="settings_category_in_use">an item in Active still uses it</string>
+    <string name="settings_category_remove">Remove</string>
 
     <!-- Item detail -->
     <string name="detail_note_label">Note</string>
@@ -84,11 +93,11 @@
     <string name="detail_recognised_text">Recognised text</string>
     <string name="detail_show_text">Show recognised text</string>
     <string name="detail_open_gallery">Open in gallery</string>
-    <string name="detail_discard">Vyřízeno</string>
-    <string name="detail_trash">Odložit</string>
+    <string name="detail_discard">Done</string>
+    <string name="detail_trash">Set aside</string>
     <string name="detail_restore">Bring back</string>
     <string name="detail_close">Close</string>
-    <string name="detail_image_missing">Obrázek už v galerii není</string>
+    <string name="detail_image_missing">This image is no longer in the gallery</string>
 
     <!-- Daily reminder -->
     <string name="channel_reminder_name">Daily reminder</string>
@@ -101,25 +110,40 @@
     <string name="search_title">Search</string>
     <string name="search_back">Back</string>
     <string name="search_hint">Search notes and text…</string>
-    <string name="search_retrospect_toggle">Vyřízené</string>
+    <string name="search_retrospect_toggle">Done</string>
     <string name="search_empty_prompt">Type a few words from a note or the text in a screenshot.</string>
     <string name="search_no_results">Nothing found yet.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_mode_title">Režim</string>
-    <string name="settings_mode_system">Systém</string>
-    <string name="settings_mode_light">Světlý</string>
-    <string name="settings_mode_dark">Tmavý</string>
-    <string name="settings_palette_title">Paleta</string>
+    <string name="settings_mode_title">Appearance</string>
+    <string name="settings_mode_system">System</string>
+    <string name="settings_mode_light">Light</string>
+    <string name="settings_mode_dark">Dark</string>
+    <string name="settings_palette_title">Palette</string>
+    <string name="settings_palette_violet">Violet</string>
+    <string name="settings_palette_terracotta">Terracotta</string>
+    <string name="settings_palette_dustyrose">Dusty rose</string>
+    <string name="settings_palette_sage">Sage</string>
+    <string name="settings_palette_comfortbeige">Comfort beige</string>
+    <string name="settings_palette_powderblue">Powder blue</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_cs" translatable="false">Čeština</string>
+    <string name="settings_language_en" translatable="false">English</string>
     <string name="settings_reminder_title">Reminder time</string>
     <string name="settings_reminder_body">One reminder a day, at most three items. Never more than that.</string>
     <string name="settings_quiet_start_title">Quiet from</string>
     <string name="settings_quiet_body">No reminders during these hours.</string>
     <string name="settings_quiet_end_title">Quiet until</string>
     <string name="settings_pro_title">SnapMind Pro</string>
-    <string name="settings_pro_body">Zachytávání, připomínky i hledání zůstávají zdarma navždy. Pro platí za to, co stojí peníze za každé použití — chytré názvy a shrnutí v cloudu.</string>
-    <string name="settings_pro_active">Aktivní. Děkuju.</string>
-    <string name="settings_pro_subscribe">Předplatit</string>
+    <string name="settings_pro_body">Capture, reminders and search stay free forever. Pro pays for the part that costs money every time it runs — smart titles and summaries in the cloud.</string>
+    <string name="settings_pro_active">Active. Thank you.</string>
+    <string name="settings_pro_subscribe">Subscribe</string>
     <string name="settings_back">Back</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_source_host" translatable="false">github.com/Bjadycze/SnapMind</string>
+    <string name="settings_about_source_url" translatable="false">https://github.com/Bjadycze/SnapMind</string>
+    <string name="settings_about_version">Version</string>
+
 </resources>

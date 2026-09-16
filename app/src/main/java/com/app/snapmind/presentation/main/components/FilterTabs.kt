@@ -25,18 +25,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.border
+import com.app.snapmind.R
 import com.app.snapmind.presentation.theme.LocalSnapMindPalette
 //import androidx.compose.animation.core.tween
 
 
-/** Which items MainScreen shows. "Vyřízené" == CapturedItem.resolvedAt != null. */
-enum class ItemFilter(val label: String) {
-    ACTIVE("Aktivní"),
-    DONE("Vyřízené"),
-    ALL("Vše")
+/** Which items MainScreen shows. "Done" == CapturedItem.resolvedAt != null. */
+enum class ItemFilter(val labelRes: Int) {
+    ACTIVE(R.string.filter_active),
+    DONE(R.string.filter_done),
+    ALL(R.string.filter_all)
 }
 
 // ---- TUNABLES ---------------------------------------------------------
@@ -94,7 +96,7 @@ fun FilterTabs(
             filters.forEachIndexed { index, filter ->
                 val isSelected = filter == selected
                 Text(
-                    text = filter.label,
+                    text = stringResource(filter.labelRes),
                     color = if (isSelected) {
                         palette.accent
                     } else {

@@ -30,12 +30,16 @@ import androidx.compose.ui.draw.clip
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.snapmind.BuildConfig
 import com.app.snapmind.R
+import com.app.snapmind.domain.model.AppLanguage
 import com.app.snapmind.presentation.theme.LocalSnapMindPalette
 import com.app.snapmind.presentation.theme.PaletteChoice
 import com.app.snapmind.presentation.theme.ThemeMode
@@ -115,10 +119,14 @@ fun SettingsScreen(
             onChange = { viewModel.setQuietHours(state.quietStartHour, it) }
         )
 
-        ProSetting(
-            isPro = isPro,
-            onSubscribe = { context.findActivity()?.let(viewModel::purchase) }
-        )
+        // Hidden for the first Play release; the billing stack behind it stays wired and
+        // running (CLAUDE.md "Release status"). Flipping the flag brings the section back.
+        if (BuildConfig.BILLING_UI_ENABLED) {
+            ProSetting(
+                isPro = isPro,
+                onSubscribe = { context.findActivity()?.let(viewModel::purchase) }
+            )
+        }
 
         // Only shown once the user has made one: an empty section would be a setting for
         // something that does not exist yet.
@@ -128,6 +136,70 @@ fun SettingsScreen(
                 onRemove = viewModel::retireCategory
             )
         }
+
+        // No recreate(): MainActivity wraps its content tree in a CompositionLocalProvider
+        // keyed on this same state, so the change re-renders in place (spec.md §10 follow-up).
+        LanguageSetting(
+            selected = state.appLanguage,
+            onChange = viewModel::setAppLanguage
+        )
+
+        AboutSetting(onOpenSource = { context.openUrl(it) })
+    }
+}
+
+/**
+ * O aplikaci. The repository link is its own label — no "Zdrojový kód" caption above it — and
+ * must never sit under a heading about payment or support: an external payment path reachable
+ * from inside the app would breach Google Play Payments policy (spec.md 11.17.1).
+ */
+@Composable
+private fun AboutSetting(onOpenSource: (String) -> Unit) {
+    val palette = LocalSnapMindPalette.current
+    val sourceUrl = stringResource(R.string.settings_about_source_url)
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_about_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                text = stringResource(R.string.settings_about_source_host),
+                style = MaterialTheme.typography.bodyLarge,
+                color = palette.accent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenSource(sourceUrl) }
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_about_version),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = BuildConfig.VERSION_NAME,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = palette.onSurfaceFaded
+                )
+            }
+        }
+    }
+}
+
+/** A device with no browser would otherwise take an ActivityNotFoundException to the face. */
+private fun Context.openUrl(url: String) {
+    runCatching {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 }
 
@@ -281,6 +353,38 @@ private fun ModeSetting(mode: ThemeMode, onChange: (ThemeMode) -> Unit) {
 }
 
 @Composable
+private fun LanguageSetting(selected: AppLanguage, onChange: (AppLanguage) -> Unit) {
+    val options = listOf(
+        AppLanguage.SYSTEM to stringResource(R.string.settings_language_system),
+        AppLanguage.CS to stringResource(R.string.settings_language_cs),
+        AppLanguage.EN to stringResource(R.string.settings_language_en)
+    )
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_language_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, (option, label) ->
+                    SegmentedButton(
+                        selected = selected == option,
+                        onClick = { onChange(option) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                    ) {
+                        Text(label)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PaletteSetting(selected: PaletteChoice, mode: ThemeMode, onChange: (PaletteChoice) -> Unit) {
     // Preview swatches follow the mode actually in effect, not a fixed dark/light guess --
     // otherwise a Light-mode user would pick a colour by its (invisible) dark-mode accent.
@@ -320,7 +424,7 @@ private fun PaletteSetting(selected: PaletteChoice, mode: ThemeMode, onChange: (
                 }
             }
             Text(
-                text = selected.labelCs,
+                text = stringResource(selected.labelRes),
                 style = MaterialTheme.typography.bodySmall
             )
         }

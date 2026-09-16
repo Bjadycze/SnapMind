@@ -1,5 +1,6 @@
 package com.app.snapmind.domain.classify
 
+import com.app.snapmind.domain.model.AppLanguage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -80,11 +81,77 @@ class ContentClassifierTest {
         assertEquals(DetectedCategory.CONTACT, result.category)
     }
 
+    @Test
+    fun `international phone number is not parsed as a date`() {
+        val result = tier0.classify("Call +1 555-123-4567", now)
+        assertNull(result.dateMillis)
+        assertEquals(DetectedCategory.CONTACT, result.category)
+    }
+
+    @Test
+    fun `english month name with time`() {
+        val result = tier0.classify("Meeting Mar 20, 2026 19:30", now)
+        assertEquals(millis(LocalDate.of(2026, 3, 20), LocalTime.of(19, 30)), result.dateMillis)
+    }
+
+    @Test
+    fun `missing year rolls forward with english month name`() {
+        val december = millis(LocalDate.of(2026, 12, 20), LocalTime.of(9, 0))
+        val result = tier0.classify("Ticket for Mar 15", december)
+        assertEquals(millis(LocalDate.of(2027, 3, 15), LocalTime.NOON), result.dateMillis)
+    }
+
+    @Test
+    fun `relative tomorrow in english`() {
+        val result = tier0.classify("tomorrow pick up parcel", now)
+        assertEquals(millis(LocalDate.of(2026, 1, 11), LocalTime.NOON), result.dateMillis)
+    }
+
+    @Test
+    fun `next week in czech`() {
+        val result = tier0.classify("schůzka příští týden", now)
+        assertEquals(millis(LocalDate.of(2026, 1, 17), LocalTime.NOON), result.dateMillis)
+    }
+
+    @Test
+    fun `next week in english`() {
+        val result = tier0.classify("meeting next week", now)
+        assertEquals(millis(LocalDate.of(2026, 1, 17), LocalTime.NOON), result.dateMillis)
+    }
+
+    // ---- den vs. měsíc v ambiguitní / (spec.md 11.14 follow-up) -------------
+
+    @Test
+    fun `slash date with day over twelve is unambiguous regardless of language`() {
+        // 25 can't be a month, so this is always 25 January -- the language argument here is
+        // deliberately EN to prove it is ignored.
+        val result = tier0.classify("Meeting 25/01/2026", now, AppLanguage.EN)
+        assertEquals(millis(LocalDate.of(2026, 1, 25), LocalTime.NOON), result.dateMillis)
+    }
+
+    @Test
+    fun `ambiguous slash date resolves month-first in english`() {
+        val result = tier0.classify("Meeting 01/02/2026", now, AppLanguage.EN)
+        assertEquals(millis(LocalDate.of(2026, 1, 2), LocalTime.NOON), result.dateMillis)
+    }
+
+    @Test
+    fun `ambiguous slash date resolves day-first in czech`() {
+        val result = tier0.classify("Schůzka 01/02/2026", now, AppLanguage.CS)
+        assertEquals(millis(LocalDate.of(2026, 2, 1), LocalTime.NOON), result.dateMillis)
+    }
+
     // ---- kategorie ---------------------------------------------------------
 
     @Test
     fun `amount plus order code is a purchase`() {
         val result = chain.classify("Objednávka AB12345 celkem 1 299 Kč", now)
+        assertEquals(DetectedCategory.PURCHASE, result.category)
+    }
+
+    @Test
+    fun `amount plus order code is a purchase in pounds`() {
+        val result = chain.classify("Order AB12345 total £129.99", now)
         assertEquals(DetectedCategory.PURCHASE, result.category)
     }
 

@@ -1,8 +1,11 @@
 package com.app.snapmind.domain.usecase
 
+import android.content.Context
 import com.app.snapmind.data.link.LinkMetadataFetcher
+import com.app.snapmind.data.prefs.AppLanguagePrefs
 import com.app.snapmind.domain.classify.ContentClassifier
 import com.app.snapmind.domain.repository.CapturedItemRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 /**
@@ -15,7 +18,8 @@ import javax.inject.Inject
 class EnrichSharedLinkUseCase @Inject constructor(
     private val repository: CapturedItemRepository,
     private val fetcher: LinkMetadataFetcher,
-    private val classifier: ContentClassifier
+    private val classifier: ContentClassifier,
+    @ApplicationContext private val context: Context
 ) {
     suspend operator fun invoke(itemId: Long, sharedText: String) {
         val url = extractUrl(sharedText) ?: return
@@ -47,7 +51,10 @@ class EnrichSharedLinkUseCase @Inject constructor(
         // same link can never undo their choice.
         val text = listOfNotNull(meta.title, item.userNote.takeIf { it.isNotBlank() }, url)
             .joinToString("\n")
-        val result = classifier.classify(text)
+        // Same mirror OcrWorker reads (AppLanguagePrefs), not DataStore -- a shared link and a
+        // screenshot with the same ambiguous date must resolve to the same answer.
+        val language = AppLanguagePrefs.get(context)
+        val result = classifier.classify(text, language = language)
         repository.updateClassification(itemId, result.category.name, result.dateMillis)
     }
 

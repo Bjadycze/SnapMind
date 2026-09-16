@@ -9,10 +9,12 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.app.snapmind.R
+import com.app.snapmind.data.prefs.AppLanguagePrefs
 import com.app.snapmind.data.prefs.SettingsDataStore
 import com.app.snapmind.domain.model.CapturedItem
 import com.app.snapmind.domain.model.QuietHours
 import com.app.snapmind.domain.usecase.BuildReminderDigestUseCase
+import com.app.snapmind.presentation.locale.withAppLocale
 import com.app.snapmind.presentation.main.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
@@ -36,6 +38,10 @@ class ReminderNotifier @Inject constructor(
     private val buildDigest: BuildReminderDigestUseCase,
     private val settings: SettingsDataStore
 ) {
+
+    /** Runs outside any Activity, so the language comes from the synchronous prefs mirror. */
+    private val localizedContext: Context
+        get() = context.withAppLocale(AppLanguagePrefs.get(context))
 
     suspend fun deliverIfDue() {
         val quiet = QuietHours(
@@ -64,7 +70,7 @@ class ReminderNotifier @Inject constructor(
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
-            .setContentTitle(context.getString(R.string.digest_title))
+            .setContentTitle(localizedContext.getString(R.string.digest_title))
             .setContentText(lines.joinToString(" · "))
             .setStyle(
                 NotificationCompat.InboxStyle().also { style ->
@@ -93,7 +99,7 @@ class ReminderNotifier @Inject constructor(
         val text = item.extractedText.trim().replace(Regex("\\s+"), " ")
         if (text.isNotEmpty()) return text.take(MAX_LINE_CHARS)
 
-        return context.getString(R.string.digest_item_untitled)
+        return localizedContext.getString(R.string.digest_item_untitled)
     }
 
     private fun ensureChannel() {
@@ -101,10 +107,10 @@ class ReminderNotifier @Inject constructor(
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                context.getString(R.string.channel_reminder_name),
+                localizedContext.getString(R.string.channel_reminder_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = context.getString(R.string.channel_reminder_desc)
+                description = localizedContext.getString(R.string.channel_reminder_desc)
                 setShowBadge(false)
             }
         )

@@ -1,5 +1,6 @@
 package com.app.snapmind.domain.classify
 
+import com.app.snapmind.domain.model.AppLanguage
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -7,6 +8,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 
 /**
  * Tier 0 — čistě deterministické regexy: datum a čas, URL, telefon, částka, kód
@@ -22,16 +24,16 @@ class Tier0RegexClassifier(
     private val zone: ZoneId = ZoneId.systemDefault()
 ) : ContentClassifier {
 
-    override fun classify(text: String, nowMillis: Long): ClassificationResult {
+    override fun classify(text: String, nowMillis: Long, language: AppLanguage): ClassificationResult {
         if (text.isBlank()) return ClassificationResult.EMPTY
 
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val time = findTime(text)
-        val date = findDate(text, today)
+        val date = findDate(text, today, language)
 
         val signals = Signals(
             hasUrl = URL.containsMatchIn(text),
-            hasPhone = PHONE.containsMatchIn(text),
+            hasPhone = PHONE.containsMatchIn(text) || PHONE_INTL.containsMatchIn(text),
             hasAmount = AMOUNT_SUFFIX.containsMatchIn(text) || AMOUNT_PREFIX.containsMatchIn(text),
             hasCode = FLIGHT.containsMatchIn(text) || ORDER_CODE.containsMatchIn(text),
             hasTime = time != null
@@ -60,11 +62,11 @@ class Tier0RegexClassifier(
 
     // ---- datum -------------------------------------------------------------
 
-    private fun findDate(text: String, today: LocalDate): LocalDate? =
+    private fun findDate(text: String, today: LocalDate, language: AppLanguage): LocalDate? =
         isoDate(text)
             ?: czechMonthName(text, today)
             ?: englishMonthName(text, today)
-            ?: numericDate(text, today)
+            ?: numericDate(text, today, language)
             ?: relativeDate(text, today)
 
     private fun isoDate(text: String): LocalDate? =
@@ -95,16 +97,52 @@ class Tier0RegexClassifier(
         return null
     }
 
-    private fun numericDate(text: String, today: LocalDate): LocalDate? =
+    private fun numericDate(text: String, today: LocalDate, language: AppLanguage): LocalDate? =
         NUMERIC.findAll(text).firstNotNullOfOrNull { m ->
-            val rawYear = m.groupValues[3].toIntOrNull()
+            val first = m.groupValues[1].toInt()
+            val separator = m.groupValues[2]
+            val second = m.groupValues[3].toInt()
+            val rawYear = m.groupValues[4].toIntOrNull()
             val year = when {
                 rawYear == null -> null
                 rawYear < 100 -> 2000 + rawYear
                 else -> rawYear
             }
-            build(m.groupValues[1].toInt(), m.groupValues[2].toInt(), year, today)
+            val (day, month) = resolveDayMonth(first, second, separator, language)
+            build(day, month, year, today)
         }
+
+    /**
+     * DATE FORMAT IS THE PAST. 01/02/2026 is 1 February in Czech and 2 January in American
+     * English -- two numbers <= 12 have no format-agnostic reading. Resolution, in this exact
+     * order, DO NOT "simplify" this to a single fixed order -- that is precisely the bug this
+     * function exists to prevent:
+     *
+     *  1. If either number is > 12 it cannot be a month, so it must be the day -- the format is
+     *     unambiguous and the language is irrelevant.
+     *  2. A "." separator is ALWAYS DD.MM, regardless of language: the American convention
+     *     never uses a dot.
+     *  3. Only "/" with both numbers <= 12 is genuinely ambiguous. Only then does the app's
+     *     language decide: EN -> MM/DD, CS -> DD/MM.
+     */
+    private fun resolveDayMonth(
+        first: Int,
+        second: Int,
+        separator: String,
+        language: AppLanguage
+    ): Pair<Int, Int> = when {
+        first > 12 -> first to second
+        second > 12 -> second to first
+        separator == "." -> first to second
+        resolveLanguage(language) == AppLanguage.EN -> second to first
+        else -> first to second
+    }
+
+    /** SYSTEM means the device's actual language, not the language chosen for the app's UI. */
+    private fun resolveLanguage(language: AppLanguage): AppLanguage = when (language) {
+        AppLanguage.SYSTEM -> if (Locale.getDefault().language == "cs") AppLanguage.CS else AppLanguage.EN
+        else -> language
+    }
 
     private fun relativeDate(text: String, today: LocalDate): LocalDate? {
         val lower = text.lowercase()
@@ -163,12 +201,16 @@ class Tier0RegexClassifier(
         // 9 číslic v českém členění, volitelně s předvolbou. Datum sem neprojde.
         val PHONE = Regex("""(?<!\d)(\+\d{1,3}\s?)?\d{3}\s?\d{3}\s?\d{3}(?!\d)""")
 
+        // Mezinárodní formát: vždy s "+", jinak by se nedal rozeznat od čísla objednávky nebo
+        // částky. Aspoň tři skupiny po "+předvolbě" drží spodní hranici na věrohodné délce čísla.
+        val PHONE_INTL = Regex("""(?<!\d)\+\d{1,3}(?:[\s-]?\d{2,4}){3,5}(?!\d)""")
+
         val AMOUNT_SUFFIX = Regex(
-            """(?<!\d)\d{1,3}(?:[ .]\d{3})*(?:[.,]\d{1,2})?\s?(kč|kc|czk|,-|eur|€|usd|\$)""",
+            """(?<!\d)\d{1,3}(?:[ .]\d{3})*(?:[.,]\d{1,2})?\s?(kč|kc|czk|,-|eur|€|usd|\$|gbp|£)""",
             RegexOption.IGNORE_CASE
         )
         val AMOUNT_PREFIX = Regex(
-            """(kč|czk|eur|€|usd|\$)\s?\d{1,3}(?:[ .]\d{3})*(?:[.,]\d{1,2})?""",
+            """(kč|czk|eur|€|usd|\$|gbp|£)\s?\d{1,3}(?:[ .]\d{3})*(?:[.,]\d{1,2})?""",
             RegexOption.IGNORE_CASE
         )
 
@@ -189,7 +231,9 @@ class Tier0RegexClassifier(
 
         val ISO = Regex("""(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)""")
 
-        val NUMERIC = Regex("""(?<!\d)(\d{1,2})\s*[./]\s*(\d{1,2})\s*[./]?\s*(\d{4}|\d{2})?(?!\d)""")
+        // Oddělovač je vlastní skupina (2) -- resolveDayMonth podle něj (a podle jazyka)
+        // rozhoduje mezi DD/MM a MM/DD, viz komentář u resolveDayMonth.
+        val NUMERIC = Regex("""(?<!\d)(\d{1,2})\s*([./])\s*(\d{1,2})\s*[./]?\s*(\d{4}|\d{2})?(?!\d)""")
 
         val CZ_MONTH_DATE = Regex(
             """(?<!\d)(\d{1,2})\.?\s*([a-záčďéěíňóřšťúůýž]{3,12})(?:\s+(\d{4}))?"""
@@ -217,7 +261,8 @@ class Tier0RegexClassifier(
         val RELATIVE_DAYS = listOf(
             "dnes" to 0L, "today" to 0L,
             "zitra" to 1L, "zítra" to 1L, "tomorrow" to 1L,
-            "pozitri" to 2L, "pozítří" to 2L
+            "pozitri" to 2L, "pozítří" to 2L,
+            "pristi tyden" to 7L, "příští týden" to 7L, "next week" to 7L
         )
 
         val WEEKDAYS = listOf(

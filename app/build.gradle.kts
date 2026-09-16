@@ -8,14 +8,16 @@ plugins {
 
 android {
     namespace = "com.app.snapmind"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.app.snapmind"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
+        // versionCode is never reused: Play rejects an upload that repeats one, even after
+        // the build it belonged to was deleted. Increment on every upload.
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -25,8 +27,23 @@ android {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
     buildTypes {
+        debug {
+            // Hidden by default in every build variant (CLAUDE.md "Release status"). The
+            // billing code stays wired -- only the Settings section stops rendering. A build
+            // with it visible is `-Psnapmind.billingUi=true`.
+            val billingUi = (project.findProperty("snapmind.billingUi") as? String)
+                ?.toBooleanStrictOrNull() ?: false
+            buildConfigField("boolean", "BILLING_UI_ENABLED", billingUi.toString())
+        }
         release {
             isMinifyEnabled = false
+
+            // Hidden for the first Play release (CLAUDE.md "Release status"). The billing code
+            // stays wired -- only the Settings section stops rendering. A release build with it
+            // visible is `-Psnapmind.billingUi=true`; re-enabling for real is this default.
+            val billingUi = (project.findProperty("snapmind.billingUi") as? String)
+                ?.toBooleanStrictOrNull() ?: false
+            buildConfigField("boolean", "BILLING_UI_ENABLED", billingUi.toString())
         }
     }
 
@@ -41,6 +58,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

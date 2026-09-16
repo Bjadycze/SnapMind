@@ -6,6 +6,7 @@ import android.app.Activity
 import com.app.snapmind.data.billing.BillingManager
 import com.app.snapmind.data.prefs.SettingsDataStore
 import com.app.snapmind.domain.billing.EntitlementProvider
+import com.app.snapmind.domain.model.AppLanguage
 import com.app.snapmind.domain.repository.CapturedItemRepository
 import com.app.snapmind.presentation.theme.PaletteChoice
 import com.app.snapmind.presentation.theme.ThemeMode
@@ -27,7 +28,8 @@ data class SettingsUiState(
     val quietStartHour: Int = 22,
     val quietEndHour: Int = 8,
     val palette: PaletteChoice = PaletteChoice.DEFAULT,
-    val themeMode: ThemeMode = ThemeMode.DARK
+    val themeMode: ThemeMode = ThemeMode.DARK,
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM
 )
 
 @HiltViewModel
@@ -71,13 +73,18 @@ class SettingsViewModel @Inject constructor(
     }
 
     val state: StateFlow<SettingsUiState> = combine(
-        settings.reminderHour,
-        settings.quietStartHour,
-        settings.quietEndHour,
-        settings.palette,
-        settings.themeMode
-    ) { reminder, quietStart, quietEnd, palette, themeMode ->
-        SettingsUiState(reminder, quietStart, quietEnd, palette, themeMode)
+        combine(
+            settings.reminderHour,
+            settings.quietStartHour,
+            settings.quietEndHour,
+            settings.palette,
+            settings.themeMode
+        ) { reminder, quietStart, quietEnd, palette, themeMode ->
+            SettingsUiState(reminder, quietStart, quietEnd, palette, themeMode)
+        },
+        settings.appLanguage
+    ) { partial, appLanguage ->
+        partial.copy(appLanguage = appLanguage)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setReminderHour(hour: Int) {
@@ -98,6 +105,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settings.setThemeMode(mode) }
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        viewModelScope.launch { settings.setAppLanguage(language) }
     }
 
     /**

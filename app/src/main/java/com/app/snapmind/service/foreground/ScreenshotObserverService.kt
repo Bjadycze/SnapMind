@@ -18,11 +18,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.app.snapmind.R
 import com.app.snapmind.data.mediastore.ScreenshotQuery
+import com.app.snapmind.data.prefs.AppLanguagePrefs
 import com.app.snapmind.domain.model.CaptureSource
 import com.app.snapmind.domain.model.ReminderPolicy
 import com.app.snapmind.domain.repository.CapturedItemRepository
 import com.app.snapmind.domain.service.QuickCapturePresenter
 import com.app.snapmind.domain.usecase.ProcessCapturedImageUseCase
+import com.app.snapmind.presentation.locale.withAppLocale
 import com.app.snapmind.service.observer.MediaStoreObserver
 import com.app.snapmind.service.worker.OcrWorker
 import dagger.hilt.android.AndroidEntryPoint
@@ -65,11 +67,14 @@ class ScreenshotObserverService : LifecycleService() {
     }
 
     private fun startAsForeground() {
+        // No Activity to read from here, so the choice comes from the synchronous prefs mirror.
+        val localizedContext = withAppLocale(AppLanguagePrefs.get(this))
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    getString(R.string.channel_service_name),
+                    localizedContext.getString(R.string.channel_service_name),
                     NotificationManager.IMPORTANCE_MIN
                 ).apply { setShowBadge(false) }
             )
@@ -77,7 +82,7 @@ class ScreenshotObserverService : LifecycleService() {
 
         val notification: Notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_view)
-            .setContentTitle(getString(R.string.service_running))
+            .setContentTitle(localizedContext.getString(R.string.service_running))
             .setOngoing(true)
             .build()
 

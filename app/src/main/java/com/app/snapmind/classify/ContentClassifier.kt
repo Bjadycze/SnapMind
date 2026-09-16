@@ -1,5 +1,7 @@
 package com.app.snapmind.domain.classify
 
+import com.app.snapmind.domain.model.AppLanguage
+
 /**
  * Hrubá kategorie odvozená z textu položky (OCR výstup nebo sdílený text).
  *
@@ -44,5 +46,14 @@ data class ClassificationResult(
  * obyčejným JUnit testem.
  */
 interface ContentClassifier {
-    fun classify(text: String, nowMillis: Long = System.currentTimeMillis()): ClassificationResult
+    /**
+     * [language] only matters for Tier 0's day/month disambiguation on an ambiguous slash
+     * date (spec.md 11.14 follow-up) -- SYSTEM resolves to the device's actual language, not
+     * whatever the user picked for the app's own UI (AppLanguagePrefs / AppLocale.kt).
+     */
+    fun classify(
+        text: String,
+        nowMillis: Long = System.currentTimeMillis(),
+        language: AppLanguage = AppLanguage.SYSTEM
+    ): ClassificationResult
 }

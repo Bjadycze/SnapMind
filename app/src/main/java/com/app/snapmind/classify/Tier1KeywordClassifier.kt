@@ -1,5 +1,7 @@
 package com.app.snapmind.domain.classify
 
+import com.app.snapmind.domain.model.AppLanguage
+
 /**
  * Tier 1 — hrubá kategorie z klíčových slov a struktury. Na zařízení, bez sítě.
  *
@@ -7,10 +9,14 @@ package com.app.snapmind.domain.classify
  * Proto stačí prosté skóre a pevné pořadí při shodě, žádný model.
  *
  * Datum neurčuje — to je výhradně práce Tier 0.
+ *
+ * Anglická a česká klíčová slova jsou v jednom seznamu na kategorii a testují se obě
+ * současně bez ohledu na [language] -- uživatel s anglickým UI může mít český screenshot
+ * a naopak (krok 3 lokalizace), takže jazyk aplikace o ničem nerozhoduje.
  */
 class Tier1KeywordClassifier : ContentClassifier {
 
-    override fun classify(text: String, nowMillis: Long): ClassificationResult {
+    override fun classify(text: String, nowMillis: Long, language: AppLanguage): ClassificationResult {
         if (text.isBlank()) return ClassificationResult.EMPTY
         val lower = text.lowercase()
 

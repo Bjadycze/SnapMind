@@ -16,7 +16,9 @@ enum class LinkPlatform(val label: String, val accent: Color) {
     TIKTOK("TikTok", Color(0xFF4ED8D0)),
     X("X", Color(0xFFB4B2A9)),
     REDDIT("Reddit", Color(0xFFFF7A45)),
-    OTHER("Odkaz", Color(0xFFAFA9EC));
+    // Not a brand name, so unlike the others this has no fixed label -- the display site
+    // resolves it through R.string.link_platform_other instead of reading this field.
+    OTHER("", Color(0xFFAFA9EC));
 
     companion object {
         /** Returns null when the item is a screenshot: extractedText is OCR output, not a URL. */

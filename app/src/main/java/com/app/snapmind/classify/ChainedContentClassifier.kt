@@ -1,5 +1,6 @@
 package com.app.snapmind.domain.classify
 
+import com.app.snapmind.domain.model.AppLanguage
 import javax.inject.Inject
 
 /**
@@ -14,13 +15,13 @@ class ChainedContentClassifier @Inject constructor(
     private val tier1: Tier1KeywordClassifier
 ) : ContentClassifier {
 
-    override fun classify(text: String, nowMillis: Long): ClassificationResult {
+    override fun classify(text: String, nowMillis: Long, language: AppLanguage): ClassificationResult {
         if (text.isBlank()) return ClassificationResult.EMPTY
 
-        val base = tier0.classify(text, nowMillis)
+        val base = tier0.classify(text, nowMillis, language)
         if (base.category != DetectedCategory.UNKNOWN) return base
 
-        val keyword = tier1.classify(text, nowMillis).category
+        val keyword = tier1.classify(text, nowMillis, language).category
         val category = when {
             keyword != DetectedCategory.UNKNOWN -> keyword
             base.signals.hasUrl -> DetectedCategory.ARTICLE

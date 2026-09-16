@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.app.snapmind.data.prefs.AppLanguagePrefs
 import com.app.snapmind.domain.classify.ContentClassifier
 import com.app.snapmind.domain.repository.CapturedItemRepository
 import com.app.snapmind.domain.service.OcrAnalyzer
@@ -24,6 +25,10 @@ class OcrWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        // No Activity here, so the choice comes from the synchronous SharedPreferences mirror,
+        // not DataStore (data/prefs/AppLanguagePrefs.kt).
+        val language = AppLanguagePrefs.get(applicationContext)
+
         val pending = repository.getUnprocessed()
         for (item in pending) {
             val uri = item.imageUri
@@ -31,7 +36,7 @@ class OcrWorker @AssistedInject constructor(
             val text = if (uri == null) "" else runCatching { ocr.analyzeText(uri) }.getOrDefault("")
             repository.updateOcrResult(item.id, text)
 
-            val result = classifier.classify("$text\n${item.userNote}")
+            val result = classifier.classify("$text\n${item.userNote}", language = language)
             repository.updateClassification(item.id, result.category.name, result.dateMillis)
         }
         return Result.success()
