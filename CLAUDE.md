@@ -21,13 +21,14 @@ the Claude project as `claude/release-stav.md`; this section is the part Claude 
 
 | Decision | What it means for the code |
 |---|---|
-| **Billing UI is hidden in every build.** | The subscription section in Settings must not render in debug or release. `BuildConfig.BILLING_UI_ENABLED` reads the gradle property `snapmind.billingUi` in both variants, default `false`; `-Psnapmind.billingUi=true` turns it on locally when the paid path is being worked on. |
+| **Billing UI is hidden in this release.** | The subscription section in Settings must not render in release builds. Gate it behind `BuildConfig.BILLING_UI_ENABLED` (default `false` for release, `true` for debug). |
 | **Billing code stays wired.** | `BillingManager`, `PlayEntitlementProvider` and `di/BillingModule` are untouched and keep running. Only UI visibility changes. Re-enabling is a one-line flag change after the 31 Mar 2027 decision. |
 | **Settings gets an "O aplikaci" section instead.** | Two rows: the GitHub repository URL (clickable, ACTION_VIEW) and the app version. The URL is its own label — no "Zdrojový kód" caption above it. |
 | **The GitHub link must never sit under a heading about payment or support.** | If GitHub Sponsors or any donate path is ever added, the in-app link has to be removed — linking to payment outside Play violates Google Play Payments policy. |
 | **Target API 36 done, edge-to-edge not verified.** | compileSdk/targetSdk are on 36 and both builds pass. Android 16 enforces edge-to-edge for targetSdk 36 with no opt-out, and that has NOT been checked on the device yet — content may sit under the status and navigation bars. |
 
-`buildFeatures { buildConfig = true }` is enabled in `app/build.gradle.kts`.
+`buildFeatures { buildConfig = true }` is currently absent from `app/build.gradle.kts` and
+must be added before any `BuildConfig` flag can exist.
 
 ## Decisions that are already made — do not revisit
 
@@ -79,18 +80,6 @@ Close Android Studio, delete `app/build`, reopen.
 appearances per item. §7.3 forbids badges, streaks, and unread counts outright. If a change
 would touch any of that, stop and ask.
 
-## The two READMEs move together
-
-`README.md` is English and is what GitHub shows. `README.cs.md` is the Czech version. Each
-links to the other on its first line.
-
-**Any change to one is made to the other in the same commit.** A translation that drifts is
-worse than no translation, because the reader cannot tell which one is current. If a change
-cannot be made in both languages right away, do not make it in either — say so and stop.
-
-Both files state the dependency chain from *Build environment* below. When a version moves
-there, it moves in both READMEs too.
-
 ## Localisation — English is the default, Czech is a translation
 
 `res/values/strings.xml` is **English** and is the fallback for every locale.
@@ -107,15 +96,12 @@ languages, which is why English users saw Czech labels.
   `Context.withAppLocale(...)`, so changing the language redraws in place and the user stays on
   the screen they were on. `attachBaseContext` still applies the language at cold start.
 - **Code outside an Activity reads the language from the SharedPreferences mirror**
-  (`AppLanguagePrefs`), not from DataStore: notification builders, `attachBaseContext` and the
-  OCR worker have nowhere to suspend. The mirror is written before the DataStore write.
-- `LocalContext` inside the Compose tree is NOT an Activity context. Anything that needs the
-  Activity (starting an intent, `findActivity()`) must take it from the original context.
-- **`ContentClassifier.classify` takes the language**, because `01/02/2026` is 1 February in
-  Czech and 2 January in US English. Every call site passes the value from `AppLanguagePrefs`;
-  a call left on the default resolves by device locale instead and silently disagrees with the
-  rest of the app. Both keyword sets stay active at once — an English UI can still meet a Czech
-  screenshot.
+  (`AppLanguagePrefs`), not from DataStore: notification builders and `attachBaseContext` have
+  nowhere to suspend. The mirror is written before the DataStore write, never after.
+- **The locale wrapper wraps the real Activity**, via `ContextWrapper`, so `findActivity()` and
+  `startActivity()` keep working through `LocalContext`. That is deliberate — replacing it with
+  a plain application context would compile and then fail at runtime the first time a row in
+  Settings tries to open a link.
 
 ## Test device
 
