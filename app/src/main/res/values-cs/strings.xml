@@ -1,0 +1,144 @@
+<resources>
+
+    <!-- Kanály oznámení -->
+    <string name="channel_capture_name">Rychlé zachycení</string>
+    <string name="channel_capture_desc">Objeví se hned po screenshotu, ať můžeš připsat poznámku</string>
+    <string name="channel_service_name">Hlídání screenshotů</string>
+    <string name="service_running">Hlídám screenshoty</string>
+
+    <!-- Oznámení po zachycení -->
+    <string name="capture_title">Screenshot zachycen</string>
+    <string name="capture_body">Připiš poznámku, než ti to uteče</string>
+    <string name="capture_action_note">Poznámka</string>
+    <string name="capture_action_discard">Zahodit</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Než začneme</string>
+    <string name="onboarding_intro">SnapMind potřebuje pár oprávnění, aby si všiml tvých screenshotů. Kterékoli můžeš přeskočit — sdílení do aplikace funguje i tak.</string>
+    <string name="onboarding_continue">Hotovo</string>
+    <string name="onboarding_skip">Zatím přeskočit</string>
+
+    <string name="perm_notifications_title">Oznámení</string>
+    <string name="perm_notifications_reason">Výzva k poznámce je oznámení. Bez tohohle se po screenshotu neobjeví nic.</string>
+
+    <string name="perm_media_title">Fotky</string>
+    <string name="perm_media_reason">Potřeba, aby appka viděla screenshot, který jsi právě udělal. Zvol „Povolit vše" — částečný přístup tady nestačí.</string>
+
+    <string name="perm_battery_title">Baterie</string>
+    <string name="perm_battery_reason">Bez výjimky systém SnapMind přes noc zmrazí a zachycení přestanou chodit.</string>
+
+    <string name="perm_autostart_title">Automatické spouštění</string>
+    <string name="perm_autostart_reason">Telefon brání aplikacím ve spuštění po restartu. Zapni SnapMindu automatické spouštění, jinak bude mlčet, dokud ho sám neotevřeš.</string>
+
+    <string name="perm_hibernation_title">Nenech SnapMind usnout</string>
+    <string name="perm_hibernation_reason">Android vypíná aplikace, které málokdy otevřeš. SnapMind je dělaný tak, abys ho otevírat nemusel — takže ho systém dřív nebo později vypne, dokud tohle omezení nezrušíš.</string>
+
+    <string name="perm_dnd_title">Nerušit</string>
+    <string name="perm_dnd_reason">Nepovinné. Bez toho přijdou zachycení v režimu Nerušit potichu, místo aby vyskočila. Na některých telefonech musíš SnapMind navíc ručně přidat do seznamu povolených.</string>
+
+    <string name="action_allow">Povolit</string>
+    <string name="action_open_settings">Otevřít nastavení</string>
+
+    <string name="status_granted">Připraveno</string>
+    <string name="status_missing">Chybí</string>
+    <string name="status_not_needed">Není potřeba</string>
+    <string name="status_check_manually">Zkontroluj ručně</string>
+
+    <!-- Hlavní obrazovka -->
+    <string name="banner_permissions_title">Zachytávání nefunguje</string>
+    <string name="banner_permissions_body">Oprávnění, které SnapMind potřebuje, je vypnuté. Screenshotů si teď nevšímá.</string>
+    <string name="banner_permissions_action">Spravit</string>
+
+    <string name="empty_title">Zatím nic zachyceného</string>
+    <string name="empty_body">Udělej kdekoli screenshot nebo do SnapMindu něco nasdílej. Objeví se to tady.</string>
+
+    <string name="section_archive">Archiv</string>
+    <string name="item_no_note">Bez poznámky</string>
+    <string name="item_settled">%1$s · vyřízeno</string>
+    <string name="main_settings">Nastavení</string>
+
+    <!-- Záložky filtru (Aktivní/Vyřízené/Vše) -->
+    <string name="filter_active">Aktivní</string>
+    <string name="filter_done">Vyřízené</string>
+    <string name="filter_all">Vše</string>
+
+    <!-- Štítek kategorie na kartě (spec.md 11.14). UNKNOWN záměrně nemá popisek. -->
+    <string name="category_event">událost</string>
+    <string name="category_recipe">recept</string>
+    <string name="category_purchase">nákup</string>
+    <string name="category_article">článek</string>
+    <string name="category_contact">kontakt</string>
+    <string name="card_settle_question">Hotovo?</string>
+    <string name="card_settle_confirm">Hotovo</string>
+
+    <!-- Štítek sdíleného odkazu (LinkPlatform). Názvy značek (YouTube, Instagram, ...)
+         zůstávají nepřeložené - jen obecný fallback potřebuje string. -->
+    <string name="link_platform_other">Odkaz</string>
+
+    <!-- Ruční kategorie (spec.md 11.16) -->
+    <string name="detail_category_label">Kategorie</string>
+    <string name="category_none">neurčeno</string>
+    <string name="category_add">+ vlastní</string>
+    <string name="category_add_hint">Název, třeba Zahrada</string>
+    <string name="category_add_confirm">Přidat</string>
+    <string name="category_previously_used">Dřív používané:</string>
+    <string name="settings_categories_title">Vlastní kategorie</string>
+    <string name="settings_category_in_use">používá ji položka v Aktivní</string>
+    <string name="settings_category_remove">Odebrat</string>
+
+    <!-- Detail položky -->
+    <string name="detail_note_label">Poznámka</string>
+    <string name="detail_note_hint">K čemu to bylo?</string>
+    <string name="detail_recognised_text">Rozpoznaný text</string>
+    <string name="detail_show_text">Zobrazit rozpoznaný text</string>
+    <string name="detail_open_gallery">Otevřít v galerii</string>
+    <string name="detail_discard">Vyřízeno</string>
+    <string name="detail_trash">Odložit</string>
+    <string name="detail_restore">Vrátit zpátky</string>
+    <string name="detail_close">Zavřít</string>
+    <string name="detail_image_missing">Obrázek už v galerii není</string>
+
+    <!-- Denní připomínka -->
+    <string name="channel_reminder_name">Denní připomínka</string>
+    <string name="channel_reminder_desc">Jedna tichá připomínka denně k věcem, které sis uložil</string>
+    <string name="digest_title">Pár věcí, co sis uložil</string>
+    <string name="digest_item_untitled">Screenshot</string>
+
+    <!-- Hledání a ohlédnutí -->
+    <string name="search_action">Hledat</string>
+    <string name="search_title">Hledání</string>
+    <string name="search_back">Zpět</string>
+    <string name="search_hint">Hledej v poznámkách a textu…</string>
+    <string name="search_retrospect_toggle">Vyřízené</string>
+    <string name="search_empty_prompt">Napiš pár slov z poznámky nebo z textu na screenshotu.</string>
+    <string name="search_no_results">Zatím nic nenalezeno.</string>
+
+    <!-- Nastavení -->
+    <string name="settings_title">Nastavení</string>
+    <string name="settings_mode_title">Vzhled</string>
+    <string name="settings_mode_system">Systém</string>
+    <string name="settings_mode_light">Světlý</string>
+    <string name="settings_mode_dark">Tmavý</string>
+    <string name="settings_palette_title">Paleta</string>
+    <string name="settings_palette_violet">Fialová</string>
+    <string name="settings_palette_terracotta">Terakota</string>
+    <string name="settings_palette_dustyrose">Pudrová růžová</string>
+    <string name="settings_palette_sage">Šalvějová</string>
+    <string name="settings_palette_comfortbeige">Béžová</string>
+    <string name="settings_palette_powderblue">Pudrová modrá</string>
+    <string name="settings_language_title">Jazyk</string>
+    <string name="settings_language_system">Systém</string>
+    <string name="settings_reminder_title">Čas připomínky</string>
+    <string name="settings_reminder_body">Jedna připomínka denně, nejvýš tři položky. Nikdy víc.</string>
+    <string name="settings_quiet_start_title">Ticho od</string>
+    <string name="settings_quiet_body">V těchhle hodinách nechodí žádné připomínky.</string>
+    <string name="settings_quiet_end_title">Ticho do</string>
+    <string name="settings_pro_title">SnapMind Pro</string>
+    <string name="settings_pro_body">Zachytávání, připomínky i hledání zůstávají zdarma navždy. Pro platí za to, co stojí peníze za každé použití — chytré názvy a shrnutí v cloudu.</string>
+    <string name="settings_pro_active">Aktivní. Děkuju.</string>
+    <string name="settings_pro_subscribe">Předplatit</string>
+    <string name="settings_back">Zpět</string>
+    <string name="settings_about_title">O aplikaci</string>
+    <string name="settings_about_version">Verze</string>
+
+</resources>

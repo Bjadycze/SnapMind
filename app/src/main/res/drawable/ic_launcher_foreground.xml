@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SnapMind adaptive icon, foreground layer.
+  Everything sits inside the central 66x66 safe zone (21..87 on both axes),
+  so no launcher mask can clip the spark or a card corner.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Back card, tilted left -->
+    <group
+        android:name="back_card"
+        android:pivotX="46"
+        android:pivotY="50"
+        android:rotation="-6">
+        <path
+            android:fillColor="#FF795D93"
+            android:fillAlpha="0.85"
+            android:pathData="M37,32 L57,32 A7,7 0 0,1 64,39 L64,64 A7,7 0 0,1 57,71 L37,71 A7,7 0 0,1 30,64 L30,39 A7,7 0 0,1 37,32 Z" />
+    </group>
+
+    <!-- Front card, tilted right -->
+    <group
+        android:name="front_card"
+        android:pivotX="56"
+        android:pivotY="58"
+        android:rotation="4">
+        <path
+            android:fillColor="#FFD8CBF0"
+            android:pathData="M45,38 L67,38 A8,8 0 0,1 75,46 L75,72 A8,8 0 0,1 67,80 L45,80 A8,8 0 0,1 37,72 L37,46 A8,8 0 0,1 45,38 Z" />
+    </group>
+
+    <!-- Four-pointed spark, upper right, fully inside the safe zone -->
+    <path
+        android:fillColor="#FFFFF6E8"
+        android:strokeColor="#FF382A54"
+        android:strokeWidth="1.1"
+        android:strokeLineJoin="round"
+        android:pathData="M70,27 L73.4,35.6 L82,39 L73.4,42.4 L70,51 L66.6,42.4 L58,39 L66.6,35.6 Z" />
+</vector>
